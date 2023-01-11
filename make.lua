@@ -24,9 +24,23 @@ lm:source_set 'lpeglabel' {
     },
 }
 
+lm:source_set 'luafilesystem' {
+    rootdir = '3rd',
+    includes = "bee.lua/3rd/lua",
+    sources = "luafilesystem/src/*.c",
+    linux = {
+        flags = "-g -Wall -Werror=format",
+        defines = {
+            "__STDC_LIMIT_MACROS",
+            "_BSD_SOURCE"
+        }
+    }
+}
+
 lm:executable "lua-language-server" {
     deps = {
         "lpeglabel",
+        "luafilesystem",
         "source_bootstrap",
         includeCodeFormat and "code_format" or nil,
     },

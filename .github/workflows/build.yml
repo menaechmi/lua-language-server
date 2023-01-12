@@ -75,14 +75,15 @@ jobs:
       - name: "Create "
         shell: bash
         run: |
-          ls -l 
-          ls -l x86_64-linux
+          mkdir defold/lsp-lua-language-server/plugins/bin
           cp x86_64-linux/x86_64-linux.zip defold/lsp-lua-language-server/plugins/bin
           cp x86_64-macos/x86_64-macos.zip defold/lsp-lua-language-server/plugins/bin
           cp x86_64-win32/x86_64-win32.zip defold/lsp-lua-language-server/plugins/bin
-          ls -l defold
-          ls -l defold/lsp-lua-language-server/plugins/bin
           7z -y a archive.zip defold/*
+      - uses: actions/upload-artifact@v2
+        with:
+          name: result
+          path: archive.zip
       - name: Publish release assets
         uses: softprops/action-gh-release@v1
         if: startsWith(github.ref, 'refs/tags/')

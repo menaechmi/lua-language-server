@@ -1,0 +1,20 @@
+local M = {}
+
+function M.get_language_servers()
+    local cmd = './build/plugins/lsp-lua-language-server/plugins/bin/' .. editor.platform .. '/bin/lua-language-server'
+    if editor.platform == 'x86_64-win32' then
+        cmd = cmd .. '.exe'
+    end
+    local config_arg = '--configpath=build/plugins/lsp-lua-language-server/plugins/share/config.json'
+    return {
+        {
+            languages = {'lua'},
+            watched_files = {
+                { pattern = '**/.luacheckrc' }
+            },
+            command = { cmd, config_arg }
+        }
+    }
+end
+
+return M

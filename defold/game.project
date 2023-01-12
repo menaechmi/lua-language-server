@@ -1,0 +1,3 @@
+[library]
+include_dirs = lsp-lua-language-server
+

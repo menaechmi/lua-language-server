@@ -75,11 +75,11 @@ jobs:
           7z -y a archive.zip *
       - uses: actions/upload-artifact@v2
         with:
-          name: result
-          path: archive.zip
+          name: result.zip
+          path: defold/archive.zip
       - name: Publish release assets
         uses: softprops/action-gh-release@v1
         if: startsWith(github.ref, 'refs/tags/')
         with:
           generate_release_notes: true
-          files: archive.zip
+          files: defold/archive.zip

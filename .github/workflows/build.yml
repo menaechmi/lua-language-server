@@ -48,7 +48,7 @@ jobs:
           # Full name of the tarball asset
           PKG_NAME="${PKG_BASENAME}.zip"
 
-          zip -r ${PKG_NAME} ${{ env.BIN_DIR }} main.lua debugger.lua LICENSE locale doc meta script
+          7z -y a ${PKG_NAME} ${{ env.BIN_DIR }} main.lua debugger.lua LICENSE locale doc meta script
 
           echo ::set-output name=PKG_BASENAME::${PKG_BASENAME}
           echo ::set-output name=PKG_NAME::${PKG_NAME}

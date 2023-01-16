@@ -67,28 +67,33 @@ jobs:
       - name: "Create "
         shell: bash
         run: |
-          cd defold
 
-          mkdir -p lsp-lua-language-server/plugins/bin/x86_64-linux
-          7z -y x ../x86_64-linux/x86_64-linux.zip lsp-lua-language-server/plugins/bin/x86_64-linux
-          cd lsp-lua-language-server/plugins
+          mkdir -p defold/lsp-lua-language-server/plugins/bin/x86_64-linux
+          pushd defold/lsp-lua-language-server/plugins/bin/x86_64-linux
+          7z -y x ~/x86_64-linux/x86_64-linux.zip
+          popd
+          pushd defold/lsp-lua-language-server/plugins/
           7z -y a x86_64-linux.zip bin
           rm -r bin 
-          cd ../..
+          popd
 
-          mkdir -p lsp-lua-language-server/plugins/bin/x86_64-macos
-          7z -y x ../x86_64-macos/x86_64-macos.zip lsp-lua-language-server/plugins/bin/x86_64-macos
-          cd lsp-lua-language-server/plugins
+          mkdir -p defold/lsp-lua-language-server/plugins/bin/x86_64-macos
+          pushd defold/lsp-lua-language-server/plugins/bin/x86_64-macos
+          7z -y x ~/x86_64-macos/x86_64-macos.zip
+          popd
+          pushd defold/lsp-lua-language-server/plugins/
           7z -y a x86_64-macos.zip bin
           rm -r bin 
-          cd ../..
+          popd
 
-          mkdir -p lsp-lua-language-server/plugins/bin/x86_64-win32
-          7z -y x ../x86_64-win32/x86_64-win32.zip lsp-lua-language-server/plugins/bin/x86_64-win32
-          cd lsp-lua-language-server/plugins
+          mkdir -p defold/lsp-lua-language-server/plugins/bin/x86_64-win32
+          pushd defold/lsp-lua-language-server/plugins/bin/x86_64-win32
+          7z -y x ~/x86_64-win32/x86_64-win32.zip
+          popd
+          pushd defold/lsp-lua-language-server/plugins/
           7z -y a x86_64-win32.zip bin
           rm -r bin 
-          cd ../..
+          popd
 
           7z -y a release.zip *
       - uses: actions/upload-artifact@v2

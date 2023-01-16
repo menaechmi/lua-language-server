@@ -1,26 +1,16 @@
 local files   = require 'files'
-local guide   = require 'parser.guide'
-local lang    = require 'language'
 local define  = require 'proto.define'
 local log     = require 'log'
+local lspconfig = require 'config'
 local luacheck = require "luacheck.check"
-local lcstages = require "luacheck.stages"
 local lcformat = require "luacheck.format"
 local lcfilter = require "luacheck.filter"
 local lcconfig = require "luacheck.config"
 local workspace = require "workspace"
 local util     = require 'utility'
-local fs = require "luacheck.fs"
+local fs       = require "luacheck.fs"
+local inspect    = require 'inspect'
 
-local function pprint(t)
-    if type(t) ~= "table" then
-        log.info(t)
-        return
-    end
-    for k,v in pairs(t) do
-        log.info("t k:", k, "v:", v)
-    end
-end
 
 local config_stack = nil
 
@@ -39,6 +29,59 @@ files.isLua = function(uri)
     return isLua(uri)
 end
 
+local defold_config = {
+    options = {
+        stds = {},
+        files = {},
+        globals = {
+            -- defold
+            "buffer",
+            "collectionproxy",
+            "collectionfactory",
+            "crash",
+            "factory",
+            "go",
+            "gui",
+            "html5",
+            "http",
+            "image",
+            "json",
+            "label",
+            "model",
+            "msg",
+            "particlefx",
+            "physics",
+            "profiler",
+            "render",
+            "resource",
+            "socket",
+            "sprite",
+            "sound",
+            "sys",
+            "timer",
+            "tilemap",
+            "url",
+            "vmath",
+            "window",
+            "zlib",
+
+            -- defold builtin functions
+            "pprint",
+            "hash",
+            "hash_to_hex",
+
+            -- script lifecycle functions
+            "init",
+            "final",
+            "update",
+            "fixed_update",
+            "on_input",
+            "on_message",
+            "on_reload",
+        }
+    }
+}
+
 return function (uri, callback)
 
     if not config_stack then
@@ -47,7 +90,18 @@ return function (uri, callback)
         local path = fs.join(rootUri, ".luacheckrc")
         local global_path = nil
         local config = lcconfig.load_config(path, global_path)
-        config_stack = lcconfig.stack_configs({ config })
+
+        -- get editor provided globals
+        local editor_config = {
+            options = {
+                stds = {},
+                files = {},
+                globals = lspconfig.get(workspace.rootUri, 'Lua.diagnostics.globals') or {},
+            }
+        }
+
+        -- create final config stack combining LuaCheck config, Defold globals and editor globals
+        config_stack = lcconfig.stack_configs({ config, defold_config, editor_config })
     end
 
     local text = files.getText(uri)

@@ -1,26 +1,16 @@
 local files   = require 'files'
-local guide   = require 'parser.guide'
-local lang    = require 'language'
 local define  = require 'proto.define'
 local log     = require 'log'
+local lspconfig = require 'config'
 local luacheck = require "luacheck.check"
-local lcstages = require "luacheck.stages"
 local lcformat = require "luacheck.format"
 local lcfilter = require "luacheck.filter"
 local lcconfig = require "luacheck.config"
 local workspace = require "workspace"
 local util     = require 'utility'
-local fs = require "luacheck.fs"
+local fs       = require "luacheck.fs"
+local inspect    = require 'inspect'
 
-local function pprint(t)
-    if type(t) ~= "table" then
-        log.info(t)
-        return
-    end
-    for k,v in pairs(t) do
-        log.info("t k:", k, "v:", v)
-    end
-end
 
 local config_stack = nil
 
@@ -46,8 +36,19 @@ return function (uri, callback)
         local rootUri = (workspace.rootUri or ""):gsub("file://", "")
         local path = fs.join(rootUri, ".luacheckrc")
         local global_path = nil
-        local config = lcconfig.load_config(path, global_path)
-        config_stack = lcconfig.stack_configs({ config })
+        local config = lcconfig.load_config(path, global_path) or {options={stds={},files={},globals={}}}
+
+        -- get editor provided globals
+        local editor_config = {
+            options = {
+                stds = {},
+                files = {},
+                globals = lspconfig.get(workspace.rootUri, 'Lua.diagnostics.globals') or {},
+            }
+        }
+
+        -- create final config stack combining LuaCheck config, Defold globals and editor globals
+        config_stack = lcconfig.stack_configs({ config, editor_config })
     end
 
     local text = files.getText(uri)

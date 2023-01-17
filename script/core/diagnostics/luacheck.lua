@@ -29,59 +29,6 @@ files.isLua = function(uri)
     return isLua(uri)
 end
 
-local defold_config = {
-    options = {
-        stds = {},
-        files = {},
-        globals = {
-            -- defold
-            "buffer",
-            "collectionproxy",
-            "collectionfactory",
-            "crash",
-            "factory",
-            "go",
-            "gui",
-            "html5",
-            "http",
-            "image",
-            "json",
-            "label",
-            "model",
-            "msg",
-            "particlefx",
-            "physics",
-            "profiler",
-            "render",
-            "resource",
-            "socket",
-            "sprite",
-            "sound",
-            "sys",
-            "timer",
-            "tilemap",
-            "url",
-            "vmath",
-            "window",
-            "zlib",
-
-            -- defold builtin functions
-            "pprint",
-            "hash",
-            "hash_to_hex",
-
-            -- script lifecycle functions
-            "init",
-            "final",
-            "update",
-            "fixed_update",
-            "on_input",
-            "on_message",
-            "on_reload",
-        }
-    }
-}
-
 return function (uri, callback)
 
     if not config_stack then
@@ -89,7 +36,7 @@ return function (uri, callback)
         local rootUri = (workspace.rootUri or ""):gsub("file://", "")
         local path = fs.join(rootUri, ".luacheckrc")
         local global_path = nil
-        local config = lcconfig.load_config(path, global_path)
+        local config = lcconfig.load_config(path, global_path) or {options={stds={},files={},globals={}}}
 
         -- get editor provided globals
         local editor_config = {
@@ -101,7 +48,7 @@ return function (uri, callback)
         }
 
         -- create final config stack combining LuaCheck config, Defold globals and editor globals
-        config_stack = lcconfig.stack_configs({ config, defold_config, editor_config })
+        config_stack = lcconfig.stack_configs({ config, editor_config })
     end
 
     local text = files.getText(uri)

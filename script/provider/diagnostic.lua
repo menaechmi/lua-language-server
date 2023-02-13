@@ -606,19 +606,19 @@ function m.pullDiagnosticScope(callback)
         and config.get(scp.uri, 'Lua.diagnostics.enable') then
             local id = 'diagnosticsScope:' .. scp:getName()
             await.close(id)
-            await.call(function () ---@async
+            await.await(function () ---@async
                 processing = processing + 1
                 local _ <close> = util.defer(function ()
                     processing = processing - 1
                 end)
 
-                local delay = config.get(scp.uri, 'Lua.diagnostics.workspaceDelay') / 1000
-                if delay < 0 then
-                    return
-                end
-                print(delay)
-                await.sleep(math.max(delay, 0.2))
-                print('start')
+                -- local delay = config.get(scp.uri, 'Lua.diagnostics.workspaceDelay') / 1000
+                -- if delay < 0 then
+                --     return
+                -- end
+                -- print(delay)
+                -- await.sleep(math.max(delay, 0.2))
+                -- print('start')
 
                 m.awaitDiagnosticsScope(scp.uri, function (fileUri)
                     local suc, result, unchanged = xpcall(m.pullDiagnostic, log.error, fileUri, true)
@@ -634,6 +634,7 @@ function m.pullDiagnosticScope(callback)
             end, id)
         end
     end
+    await.delay()
 end
 
 function m.refreshClient()

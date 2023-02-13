@@ -1437,11 +1437,11 @@ m.register 'textDocument/diagnostic' {
 
 m.register 'workspace/diagnostic' {
     --preview = true,
-    --capability = {
-    --    diagnosticProvider = {
-    --        workspaceDiagnostics  = false,
-    --    }
-    --},
+    capability = {
+       diagnosticProvider = {
+           workspaceDiagnostics = true,
+       }
+    },
     ---@async
     function (params)
         local core = require 'provider.diagnostic'

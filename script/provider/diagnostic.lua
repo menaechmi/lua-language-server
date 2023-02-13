@@ -634,11 +634,6 @@ function m.pullDiagnosticScope(callback)
             end, id)
         end
     end
-
-    -- sleep for ever
-    while true do
-        await.sleep(1.0)
-    end
 end
 
 function m.refreshClient()

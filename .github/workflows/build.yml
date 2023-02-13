@@ -28,7 +28,7 @@ jobs:
       - uses: actions/checkout@v2
         with:
           submodules: recursive
-      - uses: actboy168/setup-luamake@master
+      - uses: actboy168/setup-luamake@9cfeef6
       - run: luamake -platform ${{ matrix.platform }}
 
       - name: Create bin archive

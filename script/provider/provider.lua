@@ -1395,7 +1395,7 @@ m.register 'inlayHint/resolve' {
 }
 
 m.register 'textDocument/diagnostic' {
-    preview = true,
+    -- preview = true,
     capability = {
         diagnosticProvider = {
             identifier            = 'identifier',
@@ -1408,40 +1408,33 @@ m.register 'textDocument/diagnostic' {
         local uri = files.getRealUri(params.textDocument.uri)
         workspace.awaitReady(uri)
         local core = require 'provider.diagnostic'
-        -- TODO: do some trick
-        core.doDiagnostic(uri)
 
-        return {
-            kind = 'unchanged',
-            resultId = uri,
-        }
-
-        --if not params.previousResultId then
-        --    core.clearCache(uri)
-        --end
-        --local results, unchanged = core.pullDiagnostic(uri, false)
-        --if unchanged then
-        --    return {
-        --        kind = 'unchanged',
-        --        resultId = uri,
-        --    }
-        --else
-        --    return {
-        --        kind = 'full',
-        --        resultId = uri,
-        --        items = results or {},
-        --    }
-        --end
+        if not params.previousResultId then
+           core.clear(uri)
+        end
+        local results, unchanged = core.pullDiagnostic(uri, false)
+        if unchanged then
+           return {
+               kind = 'unchanged',
+               resultId = uri,
+           }
+        else
+           return {
+               kind = 'full',
+               resultId = uri,
+               items = results or {},
+           }
+        end
     end
 }
 
 m.register 'workspace/diagnostic' {
     --preview = true,
-    --capability = {
-    --    diagnosticProvider = {
-    --        workspaceDiagnostics  = false,
-    --    }
-    --},
+    capability = {
+       diagnosticProvider = {
+           workspaceDiagnostics = true,
+       }
+    },
     ---@async
     function (params)
         local core = require 'provider.diagnostic'
@@ -1450,6 +1443,7 @@ m.register 'workspace/diagnostic' {
             excepts[#excepts+1] = id.value
         end
         core.clearCacheExcept(excepts)
+        local items = {}
         local function convertItem(result)
             if result.unchanged then
                 return {
@@ -1468,17 +1462,20 @@ m.register 'workspace/diagnostic' {
                 }
             end
         end
-        core.pullDiagnosticScope(function (result)
-            proto.notify('$/progress', {
-                token = params.partialResultToken,
-                value = {
-                    items = {
-                        convertItem(result)
-                    }
-                }
-            })
+        await.await(function()
+            core.pullDiagnosticScope(function (result)
+                table.insert(items, convertItem(result))
+                -- proto.notify('$/progress', {
+                --     token = params.partialResultToken,
+                --     value = {
+                --         items = {
+                --             convertItem(result)
+                --         }
+                --     }
+                -- })
+            end)
         end)
-        return { items = {} }
+        return { items = items }
     end
 }
 

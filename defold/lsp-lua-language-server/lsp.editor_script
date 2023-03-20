@@ -1,7 +1,7 @@
 local M = {}
 
 function M.get_language_servers()
-    local cmd = './build/plugins/lsp-lua-language-server/plugins/bin/' .. editor.platform .. '/bin/lua-language-server'
+    local cmd = 'build/plugins/lsp-lua-language-server/plugins/bin/' .. editor.platform .. '/bin/lua-language-server'
     if editor.platform == 'x86_64-win32' then
         cmd = cmd .. '.exe'
     end

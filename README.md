@@ -1,3 +1,29 @@
+# [Defold](https://defold.com/)'s fork of lua language server
+
+This language server works from the Defold editor and can be used to lint Defold projects.
+
+## Notable changes
+
+1. Add build a defold library project and a build script that assembles it on [release](https://github.com/defold/lua-language-server/releases) — use `release.zip` links as dependencies.
+2. Add text document and workspace diagnostics.
+
+## Known issues
+
+EmmyLua might [trip over the source code](https://github.com/EmmyLua/VSCode-EmmyLua/issues/123) of this project when it's extracted by the Defold editor to `/build/plugins`. The solution is to configure EmmyLua to ignore the build folder with this `emmy.config.json` file:
+```json
+{
+    "source": [
+        {
+            "dir": ".",
+            "exclude": [
+                "configs/**",
+                "build/**"
+            ]
+        }
+    ]
+}
+```
+
 # lua-language-server
 
 ![build](https://github.com/sumneko/lua-language-server/workflows/build/badge.svg)

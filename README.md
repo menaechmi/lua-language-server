@@ -17,7 +17,6 @@ EmmyLua might [trip over the source code](https://github.com/EmmyLua/VSCode-Emmy
         {
             "dir": ".",
             "exclude": [
-                "configs/**",
                 "build/**"
             ]
         }

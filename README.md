@@ -6,6 +6,7 @@ This language server works from the Defold editor and can be used to lint Defold
 
 1. Add build a defold library project and a build script that assembles it on [release](https://github.com/defold/lua-language-server/releases) — use `release.zip` links as dependencies.
 2. Add text document and workspace diagnostics.
+3. Use LuaCheck for diagnostics.
 
 ## Known issues
 

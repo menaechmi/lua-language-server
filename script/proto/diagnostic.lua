@@ -46,177 +46,177 @@ m.register {
     status   = 'Opened',
 }
 
--- m.register {
---     'redundant-value',
---     'unbalanced-assignments',
---     'redundant-parameter',
---     'missing-parameter',
---     'missing-return-value',
---     'redundant-return-value',
---     'missing-return',
---     'missing-fields',
--- } {
---     group    = 'unbalanced',
---     severity = 'Warning',
---     status   = 'Any',
--- }
+m.register {
+    'redundant-value',
+    'unbalanced-assignments',
+    'redundant-parameter',
+    'missing-parameter',
+    'missing-return-value',
+    'redundant-return-value',
+    'missing-return',
+    'missing-fields',
+} {
+    group    = 'unbalanced',
+    severity = 'Warning',
+    status   = 'Any',
+}
 
--- m.register {
---     'need-check-nil',
---     'undefined-field',
---     'cast-local-type',
---     'assign-type-mismatch',
---     'param-type-mismatch',
---     'cast-type-mismatch',
---     'return-type-mismatch',
---     'inject-field',
--- } {
---     group    = 'type-check',
---     severity = 'Warning',
---     status   = 'Opened',
--- }
+m.register {
+    'need-check-nil',
+    'undefined-field',
+    'cast-local-type',
+    'assign-type-mismatch',
+    'param-type-mismatch',
+    'cast-type-mismatch',
+    'return-type-mismatch',
+    'inject-field',
+} {
+    group    = 'type-check',
+    severity = 'Warning',
+    status   = 'Opened',
+}
 
--- m.register {
---     'duplicate-doc-alias',
---     'undefined-doc-class',
---     'undefined-doc-name',
---     'circle-doc-class',
---     'undefined-doc-param',
---     'duplicate-doc-param',
---     'doc-field-no-class',
---     'duplicate-doc-field',
---     'unknown-diag-code',
---     'unknown-cast-variable',
---     'unknown-operator',
--- } {
---     group    = 'luadoc',
---     severity = 'Warning',
---     status   = 'Any',
--- }
+m.register {
+    'duplicate-doc-alias',
+    'undefined-doc-class',
+    'undefined-doc-name',
+    'circle-doc-class',
+    'undefined-doc-param',
+    'duplicate-doc-param',
+    'doc-field-no-class',
+    'duplicate-doc-field',
+    'unknown-diag-code',
+    'unknown-cast-variable',
+    'unknown-operator',
+} {
+    group    = 'luadoc',
+    severity = 'Warning',
+    status   = 'Any',
+}
 
--- m.register {
---     'incomplete-signature-doc',
---     'missing-global-doc',
---     'missing-local-export-doc',
--- } {
---     group    = 'luadoc',
---     severity = 'Warning',
---     status   = 'None',
--- }
+m.register {
+    'incomplete-signature-doc',
+    'missing-global-doc',
+    'missing-local-export-doc',
+} {
+    group    = 'luadoc',
+    severity = 'Warning',
+    status   = 'None',
+}
 
--- m.register {
---     'codestyle-check'
--- } {
---     group    = 'codestyle',
---     severity = 'Warning',
---     status   = 'None',
--- }
+m.register {
+    'codestyle-check'
+} {
+    group    = 'codestyle',
+    severity = 'Warning',
+    status   = 'None',
+}
 
--- m.register {
---     'spell-check'
--- } {
---     group    = 'codestyle',
---     severity = 'Information',
---     status   = 'None',
--- }
+m.register {
+    'spell-check'
+} {
+    group    = 'codestyle',
+    severity = 'Information',
+    status   = 'None',
+}
 
--- m.register {
---     'name-style-check'
--- } {
---     group    = 'codestyle',
---     severity = 'Warning',
---     status   = 'None',
--- }
+m.register {
+    'name-style-check'
+} {
+    group    = 'codestyle',
+    severity = 'Warning',
+    status   = 'None',
+}
 
--- m.register {
---     'newline-call',
---     'newfield-call',
---     'ambiguity-1',
---     'count-down-loop',
---     'different-requires',
--- } {
---     group    = 'ambiguity',
---     severity = 'Warning',
---     status   = 'Any',
--- }
+m.register {
+    'newline-call',
+    'newfield-call',
+    'ambiguity-1',
+    'count-down-loop',
+    'different-requires',
+} {
+    group    = 'ambiguity',
+    severity = 'Warning',
+    status   = 'Any',
+}
 
--- m.register {
---     'await-in-sync',
---     'not-yieldable',
--- } {
---     group    = 'await',
---     severity = 'Warning',
---     status   = 'None',
--- }
+m.register {
+    'await-in-sync',
+    'not-yieldable',
+} {
+    group    = 'await',
+    severity = 'Warning',
+    status   = 'None',
+}
 
--- m.register {
---     'no-unknown',
--- } {
---     group    = 'strong',
---     severity = 'Warning',
---     status   = 'None',
--- }
+m.register {
+    'no-unknown',
+} {
+    group    = 'strong',
+    severity = 'Warning',
+    status   = 'None',
+}
 
--- m.register {
---     'redefined-local',
--- } {
---     group    = 'redefined',
---     severity = 'Hint',
---     status   = 'Opened',
--- }
+m.register {
+    'redefined-local',
+} {
+    group    = 'redefined',
+    severity = 'Hint',
+    status   = 'Opened',
+}
 
--- m.register {
---     'undefined-global',
---     'global-in-nil-env',
--- } {
---     group    = 'global',
---     severity = 'Warning',
---     status   = 'Any',
--- }
+m.register {
+    'undefined-global',
+    'global-in-nil-env',
+} {
+    group    = 'global',
+    severity = 'Warning',
+    status   = 'Any',
+}
 
--- m.register {
---     'lowercase-global',
---     'undefined-env-child',
--- } {
---     group    = 'global',
---     severity = 'Information',
---     status   = 'Any',
--- }
+m.register {
+    'lowercase-global',
+    'undefined-env-child',
+} {
+    group    = 'global',
+    severity = 'Information',
+    status   = 'Any',
+}
 
--- m.register {
---     'global-element',
--- } {
---     group   = 'conventions',
---     severity = 'Warning',
---     status = 'None'
--- }
+m.register {
+    'global-element',
+} {
+    group   = 'conventions',
+    severity = 'Warning',
+    status = 'None'
+}
 
--- m.register {
---     'duplicate-index',
--- } {
---     group    = 'duplicate',
---     severity = 'Warning',
---     status   = 'Any',
--- }
+m.register {
+    'duplicate-index',
+} {
+    group    = 'duplicate',
+    severity = 'Warning',
+    status   = 'Any',
+}
 
--- m.register {
---     'duplicate-set-field',
--- } {
---     group    = 'duplicate',
---     severity = 'Warning',
---     status   = 'Opened',
--- }
+m.register {
+    'duplicate-set-field',
+} {
+    group    = 'duplicate',
+    severity = 'Warning',
+    status   = 'Opened',
+}
 
--- m.register {
---     'close-non-object',
---     'deprecated',
---     'discard-returns',
---     'invisible',
--- } {
---     group    = 'strict',
---     severity = 'Warning',
---     status   = 'Any',
--- }
+m.register {
+    'close-non-object',
+    'deprecated',
+    'discard-returns',
+    'invisible',
+} {
+    group    = 'strict',
+    severity = 'Warning',
+    status   = 'Any',
+}
 
 ---@return table<string, DiagnosticSeverity>
 function m.getDefaultSeverity()

@@ -1,5 +1,7 @@
 ---@diagnostic disable: undefined-global
 
+config.addonManager.enable        = -- TODO: need translate!
+"Whether the addon manager is enabled or not."
 config.runtime.version            = -- TODO: need translate!
 "Lua runtime version."
 config.runtime.path               = -- TODO: need translate!
@@ -25,7 +27,7 @@ config.runtime.unicodeName        = -- TODO: need translate!
 config.runtime.nonstandardSymbol  = -- TODO: need translate!
 "Supports non-standard symbols. Make sure that your runtime environment supports these symbols."
 config.runtime.plugin             = -- TODO: need translate!
-"Plugin path. Please read [wiki](https://github.com/sumneko/lua-language-server/wiki/Plugins) to learn more."
+"Plugin path. Please read [wiki](https://luals.github.io/wiki/plugins) to learn more."
 config.runtime.pluginArgs         = -- TODO: need translate!
 "Additional arguments for the plugin."
 config.runtime.fileEncoding       = -- TODO: need translate!
@@ -133,7 +135,7 @@ Automatic detection and adaptation of third-party libraries, currently supported
 * Jass
 ]]
 config.workspace.userThirdParty          = -- TODO: need translate!
-'Add private third-party library configuration file paths here, please refer to the built-in [configuration file path](https://github.com/sumneko/lua-language-server/tree/master/meta/3rd)'
+'Add private third-party library configuration file paths here, please refer to the built-in [configuration file path](https://github.com/LuaLS/lua-language-server/tree/master/meta/3rd)'
 config.workspace.supportScheme           = -- TODO: need translate!
 'Provide language server for the Lua files of the following scheme.'
 config.completion.enable                 = -- TODO: need translate!
@@ -256,6 +258,8 @@ config.hint.semicolon.SameLine            = -- TODO: need translate!
 'When two statements are on the same line, display a semicolon between them.'
 config.hint.semicolon.Disable            = -- TODO: need translate!
 'Disable virtual semicolons.'
+config.codeLens.enable                   = -- TODO: need translate!
+'Enable code lens.'
 config.format.enable                     = -- TODO: need translate!
 'Enable code formatter.'
 config.format.defaultConfig              = -- TODO: need translate!
@@ -265,22 +269,16 @@ Read [formatter docs](https://github.com/CppCXY/EmmyLuaCodeStyle/tree/master/doc
 ]]
 config.spell.dict                        = -- TODO: need translate!
 'Custom words for spell checking.'
+config.nameStyle.config                  = -- TODO: need translate!
+'Set name style config'
 config.telemetry.enable                  = -- TODO: need translate!
 [[
-Enable telemetry to send your editor information and error logs over the network. Read our privacy policy [here](https://github.com/sumneko/lua-language-server/wiki/Home#privacy).
+Enable telemetry to send your editor information and error logs over the network. Read our privacy policy [here](https://luals.github.io/privacy/#language-server).
 ]]
 config.misc.parameters                   = -- TODO: need translate!
-'[Command line parameters](https://github.com/sumneko/lua-telemetry-server/tree/master/method) when starting the language service in VSCode.'
+'[Command line parameters](https://github.com/LuaLS/lua-telemetry-server/tree/master/method) when starting the language service in VSCode.'
 config.misc.executablePath               = -- TODO: need translate!
 'Specify the executable path in VSCode.'
-config.IntelliSense.traceLocalSet        = -- TODO: need translate!
-'Please read [wiki](https://github.com/sumneko/lua-language-server/wiki/IntelliSense-optional-features) to learn more.'
-config.IntelliSense.traceReturn          = -- TODO: need translate!
-'Please read [wiki](https://github.com/sumneko/lua-language-server/wiki/IntelliSense-optional-features) to learn more.'
-config.IntelliSense.traceBeSetted        = -- TODO: need translate!
-'Please read [wiki](https://github.com/sumneko/lua-language-server/wiki/IntelliSense-optional-features) to learn more.'
-config.IntelliSense.traceFieldInject     = -- TODO: need translate!
-'Please read [wiki](https://github.com/sumneko/lua-language-server/wiki/IntelliSense-optional-features) to learn more.'
 config.type.castNumberToInteger          = -- TODO: need translate!
 'Allowed to assign the `number` type to the `integer` type.'
 config.type.weakUnionCheck               = -- TODO: need translate!
@@ -369,8 +367,14 @@ config.diagnostics['duplicate-doc-param']   = -- TODO: need translate!
 'Enable diagnostics for a duplicated param annotation name.'
 config.diagnostics['duplicate-set-field']   = -- TODO: need translate!
 'Enable diagnostics for setting the same field in a class more than once.'
+config.diagnostics['incomplete-signature-doc'] = -- TODO: need translate!
+'Incomplete @param or @return annotations for functions.'
 config.diagnostics['invisible']             = -- TODO: need translate!
 'Enable diagnostics for accesses to fields which are invisible.'
+config.diagnostics['missing-global-doc']    = -- TODO: need translate!
+'Missing annotations for globals! Global functions must have a comment and annotations for all parameters and return values.'
+config.diagnostics['missing-local-export-doc'] = -- TODO: need translate!
+'Missing annotations for exported locals! Exported local functions must have a comment and annotations for all parameters and return values.'
 config.diagnostics['missing-parameter']     = -- TODO: need translate!
 'Enable diagnostics for function calls where the number of arguments is less than the number of annotated function parameters.'
 config.diagnostics['missing-return']        = -- TODO: need translate!
@@ -393,6 +397,8 @@ config.diagnostics['return-type-mismatch']  = -- TODO: need translate!
 'Enable diagnostics for return values whose type does not match the type declared in the corresponding return annotation.'
 config.diagnostics['spell-check']           = -- TODO: need translate!
 'Enable diagnostics for typos in strings.'
+config.diagnostics['name-style-check']      = -- TODO: need translate!
+'Enable diagnostics for name style.'
 config.diagnostics['unbalanced-assignments']= -- TODO: need translate!
 'Enable diagnostics on multiple assignments if not all variables obtain a value (e.g., `local x,y = 1`).'
 config.diagnostics['undefined-doc-class']   = -- TODO: need translate!
@@ -411,6 +417,8 @@ config.diagnostics['unknown-operator']      = -- TODO: need translate!
 'Enable diagnostics for unknown operators.'
 config.diagnostics['unreachable-code']      = -- TODO: need translate!
 'Enable diagnostics for unreachable code.'
+config.diagnostics['global-element']       = -- TODO: need translate!
+'Enable diagnostics to warn about global elements.'
 config.typeFormat.config                    = -- TODO: need translate!
 'Configures the formatting behavior while typing Lua code.'
 config.typeFormat.config.auto_complete_end  = -- TODO: need translate!
@@ -419,3 +427,10 @@ config.typeFormat.config.auto_complete_table_sep = -- TODO: need translate!
 'Controls if a separator is automatically appended at the end of a table declaration.'
 config.typeFormat.config.format_line        = -- TODO: need translate!
 'Controls if a line is formatted at all.'
+
+command.exportDocument = -- TODO: need translate!
+'Lua: Export Document ...'
+command.addon_manager.open = -- TODO: need translate!
+'Lua: Open Addon Manager ...'
+command.reloadFFIMeta = -- TODO: need translate!
+'Lua: Reload luajit ffi meta'

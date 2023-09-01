@@ -1,5 +1,8 @@
 name: build
 
+permissions:
+  contents: write
+
 on:
   push:
     branches:
@@ -51,10 +54,13 @@ jobs:
 
           7z -y a ${PKG_NAME} ${{ env.BIN_DIR }} main.lua debugger.lua LICENSE locale doc meta script
 
-          echo ::set-output name=PKG_BASENAME::${PKG_BASENAME}
-          echo ::set-output name=PKG_NAME::${PKG_NAME}
-      
-      - uses: actions/upload-artifact@v2
+          echo PKG_VERSION=${PKG_VERSION}             >> $GITHUB_OUTPUT
+          echo PKG_BASENAME=${PKG_BASENAME}           >> $GITHUB_OUTPUT
+          echo PKG_NAME=${PKG_NAME}                   >> $GITHUB_OUTPUT
+          echo PKG_PATH="${PKG_STAGING}/${PKG_NAME}"  >> $GITHUB_OUTPUT
+          echo PKG_STAGING=${PKG_STAGING}             >> $GITHUB_OUTPUT
+
+      - uses: actions/upload-artifact@v3
         with:
           name: ${{ steps.vars.outputs.PKG_BASENAME }}
           path: |

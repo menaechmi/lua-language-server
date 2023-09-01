@@ -1,5 +1,7 @@
 ---@diagnostic disable: undefined-global
 
+config.addonManager.enable        =
+"Whether the addon manager is enabled or not."
 config.runtime.version            =
 "Lua runtime version."
 config.runtime.path               =
@@ -25,7 +27,7 @@ config.runtime.unicodeName        =
 config.runtime.nonstandardSymbol  =
 "Supports non-standard symbols. Make sure that your runtime environment supports these symbols."
 config.runtime.plugin             =
-"Plugin path. Please read [wiki](https://github.com/sumneko/lua-language-server/wiki/Plugins) to learn more."
+"Plugin path. Please read [wiki](https://luals.github.io/wiki/plugins) to learn more."
 config.runtime.pluginArgs         =
 "Additional arguments for the plugin."
 config.runtime.fileEncoding       =
@@ -133,7 +135,7 @@ Automatic detection and adaptation of third-party libraries, currently supported
 * Jass
 ]]
 config.workspace.userThirdParty          =
-'Add private third-party library configuration file paths here, please refer to the built-in [configuration file path](https://github.com/sumneko/lua-language-server/tree/master/meta/3rd)'
+'Add private third-party library configuration file paths here, please refer to the built-in [configuration file path](https://github.com/LuaLS/lua-language-server/tree/master/meta/3rd)'
 config.workspace.supportScheme           =
 'Provide language server for the Lua files of the following scheme.'
 config.completion.enable                 =
@@ -256,6 +258,8 @@ config.hint.semicolon.SameLine            =
 'When two statements are on the same line, display a semicolon between them.'
 config.hint.semicolon.Disable            =
 'Disable virtual semicolons.'
+config.codeLens.enable                   =
+'Enable code lens.'
 config.format.enable                     =
 'Enable code formatter.'
 config.format.defaultConfig              =
@@ -265,22 +269,16 @@ Read [formatter docs](https://github.com/CppCXY/EmmyLuaCodeStyle/tree/master/doc
 ]]
 config.spell.dict                        =
 'Custom words for spell checking.'
+config.nameStyle.config                  =
+'Set name style config'
 config.telemetry.enable                  =
 [[
-Enable telemetry to send your editor information and error logs over the network. Read our privacy policy [here](https://github.com/sumneko/lua-language-server/wiki/Home#privacy).
+Enable telemetry to send your editor information and error logs over the network. Read our privacy policy [here](https://luals.github.io/privacy/#language-server).
 ]]
 config.misc.parameters                   =
-'[Command line parameters](https://github.com/sumneko/lua-telemetry-server/tree/master/method) when starting the language server in VSCode.'
+'[Command line parameters](https://github.com/LuaLS/lua-telemetry-server/tree/master/method) when starting the language server in VSCode.'
 config.misc.executablePath               =
 'Specify the executable path in VSCode.'
-config.IntelliSense.traceLocalSet        =
-'Please read [wiki](https://github.com/sumneko/lua-language-server/wiki/IntelliSense-optional-features) to learn more.'
-config.IntelliSense.traceReturn          =
-'Please read [wiki](https://github.com/sumneko/lua-language-server/wiki/IntelliSense-optional-features) to learn more.'
-config.IntelliSense.traceBeSetted        =
-'Please read [wiki](https://github.com/sumneko/lua-language-server/wiki/IntelliSense-optional-features) to learn more.'
-config.IntelliSense.traceFieldInject     =
-'Please read [wiki](https://github.com/sumneko/lua-language-server/wiki/IntelliSense-optional-features) to learn more.'
 config.type.castNumberToInteger          =
 'Allowed to assign the `number` type to the `integer` type.'
 config.type.weakUnionCheck               =
@@ -369,8 +367,14 @@ config.diagnostics['duplicate-doc-param']   =
 'Enable diagnostics for a duplicated param annotation name.'
 config.diagnostics['duplicate-set-field']   =
 'Enable diagnostics for setting the same field in a class more than once.'
+config.diagnostics['incomplete-signature-doc']    =
+'Incomplete @param or @return annotations for functions.'
 config.diagnostics['invisible']             =
 'Enable diagnostics for accesses to fields which are invisible.'
+config.diagnostics['missing-global-doc']    =
+'Missing annotations for globals! Global functions must have a comment and annotations for all parameters and return values.'
+config.diagnostics['missing-local-export-doc'] =
+'Missing annotations for exported locals! Exported local functions must have a comment and annotations for all parameters and return values.'
 config.diagnostics['missing-parameter']     =
 'Enable diagnostics for function calls where the number of arguments is less than the number of annotated function parameters.'
 config.diagnostics['missing-return']        =
@@ -393,6 +397,8 @@ config.diagnostics['return-type-mismatch']  =
 'Enable diagnostics for return values whose type does not match the type declared in the corresponding return annotation.'
 config.diagnostics['spell-check']           =
 'Enable diagnostics for typos in strings.'
+config.diagnostics['name-style-check']      =
+'Enable diagnostics for name style.'
 config.diagnostics['unbalanced-assignments']=
 'Enable diagnostics on multiple assignments if not all variables obtain a value (e.g., `local x,y = 1`).'
 config.diagnostics['undefined-doc-class']   =
@@ -411,6 +417,8 @@ config.diagnostics['unknown-operator']      =
 'Enable diagnostics for unknown operators.'
 config.diagnostics['unreachable-code']      =
 'Enable diagnostics for unreachable code.'
+config.diagnostics['global-element']       =
+'Enable diagnostics to warn about global elements.'
 config.typeFormat.config                    =
 'Configures the formatting behavior while typing Lua code.'
 config.typeFormat.config.auto_complete_end  =
@@ -419,3 +427,10 @@ config.typeFormat.config.auto_complete_table_sep =
 'Controls if a separator is automatically appended at the end of a table declaration.'
 config.typeFormat.config.format_line        =
 'Controls if a line is formatted at all.'
+
+command.exportDocument =
+'Lua: Export Document ...'
+command.addon_manager.open =
+'Lua: Open Addon Manager ...'
+command.reloadFFIMeta =
+'Lua: Reload luajit ffi meta'

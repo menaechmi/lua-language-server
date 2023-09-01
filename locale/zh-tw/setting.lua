@@ -1,5 +1,7 @@
 ---@diagnostic disable: undefined-global
 
+config.addonManager.enable        = -- TODO: need translate!
+"Whether the addon manager is enabled or not."
 config.runtime.version            =
 "Lua執行版本。"
 config.runtime.path               =
@@ -25,7 +27,7 @@ config.runtime.unicodeName        =
 config.runtime.nonstandardSymbol  =
 "支援非標準的符號。請務必確認你的執行環境支援這些符號。"
 config.runtime.plugin             =
-"延伸模組路徑，請查閱[文件](https://github.com/sumneko/lua-language-server/wiki/Plugins)瞭解用法。"
+"延伸模組路徑，請查閱[文件](https://luals.github.io/wiki/plugins)瞭解用法。"
 config.runtime.pluginArgs         = -- TODO: need translate!
 "Additional arguments for the plugin."
 config.runtime.fileEncoding       =
@@ -132,7 +134,7 @@ config.workspace.checkThirdParty  =
 * Jass
 ]]
 config.workspace.userThirdParty          =
-'在這裡添加私有的第三方庫適應檔案路徑，請參考內建的[組態檔案路徑](https://github.com/sumneko/lua-language-server/tree/master/meta/3rd)'
+'在這裡添加私有的第三方庫適應檔案路徑，請參考內建的[組態檔案路徑](https://github.com/LuaLS/lua-language-server/tree/master/meta/3rd)'
 config.workspace.supportScheme           =
 '為以下 `scheme` 的lua檔案提供語言伺服。'
 config.completion.enable                 =
@@ -255,6 +257,8 @@ config.hint.semicolon.SameLine            =
 '兩個陳述式在同一行時，在它們之間顯示分號。'
 config.hint.semicolon.Disable            =
 '停用虛擬分號。'
+config.codeLens.enable                   = -- TODO: need translate!
+'Enable code lens.'
 config.format.enable                     =
 '啟用程式碼格式化程式。'
 config.format.defaultConfig              =
@@ -264,22 +268,16 @@ config.format.defaultConfig              =
 ]]
 config.spell.dict                        =
 '拼寫檢查的自訂單詞。'
+config.nameStyle.config                  = -- TODO: need translate!
+'Set name style config'
 config.telemetry.enable                  =
 [[
-啟用遙測，透過網路發送你的編輯器資訊與錯誤日誌。在[此處](https://github.com/sumneko/lua-language-server/wiki/Home#privacy)閱讀我們的隱私聲明。
+啟用遙測，透過網路發送你的編輯器資訊與錯誤日誌。在[此處](https://luals.github.io/privacy/#language-server)閱讀我們的隱私聲明。
 ]]
 config.misc.parameters                   =
-'VSCode中啟動語言伺服時的[命令列參數](https://github.com/sumneko/lua-language-server/wiki/Getting-Started#arguments)。'
+'VSCode中啟動語言伺服時的[命令列參數](https://luals.github.io/wiki/usage#arguments)。'
 config.misc.executablePath               = -- TODO: need translate!
 'Specify the executable path in VSCode.'
-config.IntelliSense.traceLocalSet        =
-'請查閱[文件](https://github.com/sumneko/lua-language-server/wiki/IntelliSense-optional-features)瞭解用法。'
-config.IntelliSense.traceReturn          =
-'請查閱[文件](https://github.com/sumneko/lua-language-server/wiki/IntelliSense-optional-features)瞭解用法。'
-config.IntelliSense.traceBeSetted        =
-'請查閱[文件](https://github.com/sumneko/lua-language-server/wiki/IntelliSense-optional-features)瞭解用法。'
-config.IntelliSense.traceFieldInject     =
-'請查閱[文件](https://github.com/sumneko/lua-language-server/wiki/IntelliSense-optional-features)瞭解用法。'
 config.type.castNumberToInteger          =
 '允許將 `number` 類型賦值給 `integer` 類型。'
 config.type.weakUnionCheck               =
@@ -368,8 +366,14 @@ config.diagnostics['duplicate-doc-param']   = -- TODO: need translate!
 'Enable diagnostics for a duplicated param annotation name.'
 config.diagnostics['duplicate-set-field']   = -- TODO: need translate!
 'Enable diagnostics for setting the same field in a class more than once.'
+config.diagnostics['incomplete-signature-doc'] = -- TODO: need translate!
+'Incomplete @param or @return annotations for functions.'
 config.diagnostics['invisible']             = -- TODO: need translate!
 'Enable diagnostics for accesses to fields which are invisible.'
+config.diagnostics['missing-global-doc']    = -- TODO: need translate!
+'Missing annotations for globals! Global functions must have a comment and annotations for all parameters and return values.'
+config.diagnostics['missing-local-export-doc'] = -- TODO: need translate!
+'Missing annotations for exported locals! Exported local functions must have a comment and annotations for all parameters and return values.'
 config.diagnostics['missing-parameter']     = -- TODO: need translate!
 'Enable diagnostics for function calls where the number of arguments is less than the number of annotated function parameters.'
 config.diagnostics['missing-return']        = -- TODO: need translate!
@@ -392,6 +396,8 @@ config.diagnostics['return-type-mismatch']  = -- TODO: need translate!
 'Enable diagnostics for return values whose type does not match the type declared in the corresponding return annotation.'
 config.diagnostics['spell-check']           = -- TODO: need translate!
 'Enable diagnostics for typos in strings.'
+config.diagnostics['name-style-check']      = -- TODO: need translate!
+'Enable diagnostics for name style.'
 config.diagnostics['unbalanced-assignments']= -- TODO: need translate!
 'Enable diagnostics on multiple assignments if not all variables obtain a value (e.g., `local x,y = 1`).'
 config.diagnostics['undefined-doc-class']   = -- TODO: need translate!
@@ -410,6 +416,8 @@ config.diagnostics['unknown-operator']      = -- TODO: need translate!
 'Enable diagnostics for unknown operators.'
 config.diagnostics['unreachable-code']      = -- TODO: need translate!
 'Enable diagnostics for unreachable code.'
+config.diagnostics['global-element']       = -- TODO: need translate!
+'Enable diagnostics to warn about global elements.'
 config.typeFormat.config                    = -- TODO: need translate!
 'Configures the formatting behavior while typing Lua code.'
 config.typeFormat.config.auto_complete_end  = -- TODO: need translate!
@@ -418,3 +426,10 @@ config.typeFormat.config.auto_complete_table_sep = -- TODO: need translate!
 'Controls if a separator is automatically appended at the end of a table declaration.'
 config.typeFormat.config.format_line        = -- TODO: need translate!
 'Controls if a line is formatted at all.'
+
+command.exportDocument = -- TODO: need translate!
+'Lua: Export Document ...'
+command.addon_manager.open = -- TODO: need translate!
+'Lua: Open Addon Manager ...'
+command.reloadFFIMeta = -- TODO: need translate!
+'Lua: Reload luajit ffi meta'

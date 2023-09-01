@@ -149,7 +149,7 @@ function lovr.graphics.getDevice() end
 ---
 ---Returns a table indicating which features are supported by the GPU.
 ---
----@return {textureBC: boolean, textureASTC: boolean, wireframe: boolean, depthClamp: boolean, indirectDrawFirstInstance: boolean, float64: boolean, int64: boolean, int16: boolean} features # 
+---@return {textureBC: boolean, textureASTC: boolean, wireframe: boolean, depthClamp: boolean, depthResolve: boolean, indirectDrawFirstInstance: boolean, float64: boolean, int64: boolean, int16: boolean} features # 
 function lovr.graphics.getFeatures() end
 
 ---
@@ -332,11 +332,22 @@ function lovr.graphics.getLimits() end
 ---### NOTE:
 ---Fun facts about render passes:
 ---
----- Textures must have the same dimensions, layer counts, and sample counts.
 ---- Textures must have been created with the `render` `TextureUsage`.
+---- Textures must have the same dimensions, layer counts, and sample counts.
+---- When rendering to textures with multiple layers, each draw will be broadcast to all layers.
+---  Render passes have multiple "views" (cameras), and each layer uses a corresponding view,
+---  allowing each layer to be rendered from a different viewpoint.
+---
+---This enables fast stereo
+---  rendering, but can also be used to efficiently render to cubemaps.
+---
+---The `ViewIndex` variable
+---  can also be used in shaders to set up any desired per-view behavior.
 ---- If `mipmap` is true, then any textures with mipmaps must have the `transfer` `TextureUsage`.
 ---- It's okay to have zero color textures, but in this case there must be a depth texture.
 ---- Setting `clear` to `false` for textures is usually very slow on mobile GPUs.
+---- It's possible to render to a specific mipmap level of a Texture, or a subset of its layers, by
+---  rendering to texture views, see `Texture:newView`.
 ---
 ---For `compute` and `transfer` passes, all of the commands in the pass act as though they run in parallel.
 ---
@@ -460,7 +471,6 @@ function lovr.graphics.newMaterial(properties) end
 ---### NOTE:
 ---Currently, the following features are not supported by the model importer:
 ---
----- glTF: Morph targets are not supported.
 ---- glTF: Only the default scene is loaded.
 ---- glTF: Currently, each skin in a Model can have up to 256 joints.
 ---- glTF: Meshes can't appear multiple times in the node hierarchy with different skins, they need
@@ -470,6 +480,10 @@ function lovr.graphics.newMaterial(properties) end
 ---- STL: ASCII STL files are not supported.
 ---
 ---Diffuse and emissive textures will be loaded using sRGB encoding, all other textures will be loaded as linear.
+---
+---Loading a model file will fail if the asset references textures or other files using absolute paths.
+---
+---Relative paths should be used instead, and will be relative to the model file within the virtual filesystem.
 ---
 ---@overload fun(blob: lovr.Blob, options?: table):lovr.Model
 ---@overload fun(modelData: lovr.ModelData, options?: table):lovr.Model
@@ -526,8 +540,8 @@ function lovr.graphics.newTally(type, count, views) end
 ---### NOTE:
 ---If no `type` is provided in the options table, LÖVR will guess the `TextureType` of the Texture based on the number of layers:
 ---
----- If there's 1 layer, the type will be `2d`.
----- If there are 6 layers, the type will be `cube`.
+---- If there's only 1 layer, the type will be `2d`.
+---- If there are 6 images provided, the type will be `cube`.
 ---- Otherwise, the type will be `array`.
 ---
 ---Note that an Image can contain multiple layers and mipmaps.
@@ -1088,6 +1102,45 @@ function Model:getAnimationDuration(index) end
 function Model:getAnimationName(index) end
 
 ---
+---Returns the number of blend shapes in the model.
+---
+---@return number count # The number of blend shapes in the model.
+function Model:getBlendShapeCount() end
+
+---
+---Returns the name of a blend shape in the model.
+---
+---
+---### NOTE:
+---This function will throw an error if the blend shape index is invalid.
+---
+---@param index number # The index of a blend shape.
+---@return string name # The name of the blend shape.
+function Model:getBlendShapeName(index) end
+
+---
+---Returns the weight of a blend shape.
+---
+---A blend shape contains offset values for the vertices of one of the meshes in a Model.
+---
+---Whenever the Model is drawn, the offsets are multiplied by the weight of the blend shape, allowing for smooth blending between different meshes.
+---
+---A weight of zero won't apply any displacement and will skip processing of the blend shape.
+---
+---
+---### NOTE:
+---The initial weights are declared in the model file.
+---
+---Weights can be any number, but usually they're kept between 0 and 1.
+---
+---This function will throw an error if the blend shape name or index doesn't exist.
+---
+---@overload fun(self: lovr.Model, name: string):number
+---@param index number # The index of a blend shape.
+---@return number weight # The weight of the blend shape.
+function Model:getBlendShapeWeight(index) end
+
+---
 ---Returns the 6 values of the Model's axis-aligned bounding box.
 ---
 ---@return number minx # The minimum x coordinate of the vertices in the Model.
@@ -1277,10 +1330,6 @@ function Model:getNodePosition(index, space) end
 ---
 ---Returns the scale of a node.
 ---
----
----### NOTE:
----For best results when animating, it's recommended to keep the 3 components of the scale the same.
----
 ---@overload fun(self: lovr.Model, name: string, origin?: lovr.OriginType):number, number, number
 ---@param index number # The index of the node.
 ---@param origin? lovr.OriginType # Whether the scale should be returned relative to the root node or the node's parent.
@@ -1395,58 +1444,127 @@ function Model:hasJoints() end
 function Model:resetNodeTransforms() end
 
 ---
+---Sets the weight of a blend shape.
+---
+---A blend shape contains offset values for the vertices of one of the meshes in a Model.
+---
+---Whenever the Model is drawn, the offsets are multiplied by the weight of the blend shape, allowing for smooth blending between different meshes.
+---
+---A weight of zero won't apply any displacement and will skip processing of the blend shape.
+---
+---
+---### NOTE:
+---The initial weights are declared in the model file.
+---
+---Weights can be any number, but usually they're kept between 0 and 1.
+---
+---This function will throw an error if the blend shape name or index doesn't exist.
+---
+---@overload fun(self: lovr.Model, name: string, weight: number)
+---@param index number # The index of a blend shape.
+---@param weight number # The new weight for the blend shape.
+function Model:setBlendShapeWeight(index, weight) end
+
+---
 ---Sets or blends the orientation of a node to a new orientation.
 ---
----@overload fun(self: lovr.Model, name: string, orientation: lovr.rotation, blend?: number)
+---This sets the local orientation of the node, relative to its parent.
+---
+---@overload fun(self: lovr.Model, name: string, angle: number, ax: number, ay: number, az: number, blend?: number)
+---@overload fun(self: lovr.Model, index: number, orientation: lovr.Quat, blend?: number)
+---@overload fun(self: lovr.Model, name: string, orientation: lovr.Quat, blend?: number)
 ---@param index number # The index of the node.
----@param orientation lovr.rotation # The target orientation.
+---@param angle number # The number of radians the node should be rotated around its rotation axis.
+---@param ax number # The x component of the axis of rotation.
+---@param ay number # The y component of the axis of rotation.
+---@param az number # The z component of the axis of rotation.
 ---@param blend? number # A number from 0 to 1 indicating how much of the target orientation to blend in.  A value of 0 will not change the node's orientation at all, whereas 1 will fully blend to the target orientation.
-function Model:setNodeOrientation(index, orientation, blend) end
+function Model:setNodeOrientation(index, angle, ax, ay, az, blend) end
 
 ---
 ---Sets or blends the pose (position and orientation) of a node to a new pose.
 ---
+---This sets the local pose of the node, relative to its parent.
+---
+---The scale will remain unchanged.
+---
+---@overload fun(self: lovr.Model, name: string, x: number, y: number, z: number, angle: number, ax: number, ay: number, az: number, blend?: number)
+---@overload fun(self: lovr.Model, index: number, position: lovr.Vec3, orientation: lovr.Quat, blend?: number)
 ---@overload fun(self: lovr.Model, name: string, position: lovr.Vec3, orientation: lovr.Quat, blend?: number)
 ---@param index number # The index of the node.
----@param position lovr.Vec3 # The target position.  Can also be provided as 3 numbers.
----@param orientation lovr.Quat # The target orientation.  Can also be provided as 4 numbers in angle-axis form.
+---@param x number # The x component of the position.
+---@param y number # The y component of the position.
+---@param z number # The z component of the position.
+---@param angle number # The number of radians the node should be rotated around its rotation axis.
+---@param ax number # The x component of the axis of rotation.
+---@param ay number # The y component of the axis of rotation.
+---@param az number # The z component of the axis of rotation.
 ---@param blend? number # A number from 0 to 1 indicating how much of the target pose to blend in.  A value of 0 will not change the node's pose at all, whereas 1 will fully blend to the target pose.
-function Model:setNodePose(index, position, orientation, blend) end
+function Model:setNodePose(index, x, y, z, angle, ax, ay, az, blend) end
 
 ---
----Sets or blends the position of a node to a new position.
+---Sets or blends the position of a node.
 ---
+---This sets the local position of the node, relative to its parent.
+---
+---@overload fun(self: lovr.Model, name: string, x: number, y: number, z: number, blend?: number)
+---@overload fun(self: lovr.Model, index: number, position: lovr.Vec3, blend?: number)
 ---@overload fun(self: lovr.Model, name: string, position: lovr.Vec3, blend?: number)
 ---@param index number # The index of the node.
----@param position lovr.Vec3 # The target position.  Can also be provided as 3 numbers.
----@param blend? number # A number from 0 to 1 indicating how much of the target position to blend in.  A value of 0 will not change the node's position at all, whereas 1 will fully blend to the target position.
-function Model:setNodePosition(index, position, blend) end
+---@param x number # The x coordinate of the new position.
+---@param y number # The y coordinate of the new position.
+---@param z number # The z coordinate of the new position.
+---@param blend? number # A number from 0 to 1 indicating how much of the new position to blend in.  A value of 0 will not change the node's position at all, whereas 1 will fully blend to the target position.
+function Model:setNodePosition(index, x, y, z, blend) end
 
 ---
 ---Sets or blends the scale of a node to a new scale.
 ---
+---This sets the local scale of the node, relative to its parent.
+---
 ---
 ---### NOTE:
----For best results when animating, it's recommended to keep the 3 components of the scale the same.
+---For best results when animating, it's recommended to keep the 3 scale components the same.
 ---
+---@overload fun(self: lovr.Model, name: string, sx: number, sy: number, sz: number, blend?: number)
+---@overload fun(self: lovr.Model, index: number, scale: lovr.Vec3, blend?: number)
 ---@overload fun(self: lovr.Model, name: string, scale: lovr.Vec3, blend?: number)
 ---@param index number # The index of the node.
----@param scale lovr.Vec3 # The target scale.  Can also be provided as 3 numbers.
----@param blend? number # A number from 0 to 1 indicating how much of the target scale to blend in.  A value of 0 will not change the node's scale at all, whereas 1 will fully blend to the target scale.
-function Model:setNodeScale(index, scale, blend) end
+---@param sx number # The x scale.
+---@param sy number # The y scale.
+---@param sz number # The z scale.
+---@param blend? number # A number from 0 to 1 indicating how much of the new scale to blend in.  A value of 0 will not change the node's scale at all, whereas 1 will fully blend to the target scale.
+function Model:setNodeScale(index, sx, sy, sz, blend) end
 
 ---
 ---Sets or blends the transform of a node to a new transform.
 ---
+---This sets the local transform of the node, relative to its parent.
+---
 ---
 ---### NOTE:
 ---For best results when animating, it's recommended to keep the 3 components of the scale the same.
 ---
+---Even though the translation, scale, and rotation parameters are given in TSR order, they are applied in the normal TRS order.
+---
+---@overload fun(self: lovr.Model, name: string, x: number, y: number, z: number, sx: number, sy: number, sz: number, angle: number, ax: number, ay: number, az: number, blend?: number)
+---@overload fun(self: lovr.Model, index: number, position: lovr.Vec3, scale: lovr.Vec3, orientation: lovr.Quat, blend?: number)
+---@overload fun(self: lovr.Model, name: string, position: lovr.Vec3, scale: lovr.Vec3, orientation: lovr.Quat, blend?: number)
+---@overload fun(self: lovr.Model, index: number, transform: lovr.Mat4, blend?: number)
 ---@overload fun(self: lovr.Model, name: string, transform: lovr.Mat4, blend?: number)
 ---@param index number # The index of the node.
----@param transform lovr.Mat4 # The target transform.  Can also be provided as position, scale, and rotation using a mix of `Vectors` or numbers, with 3 scale components.
+---@param x number # The x component of the position.
+---@param y number # The y component of the position.
+---@param z number # The z component of the position.
+---@param sx number # The x component of the scale.
+---@param sy number # The y component of the scale.
+---@param sz number # The z component of the scale.
+---@param angle number # The number of radians the node should be rotated around its rotation axis.
+---@param ax number # The x component of the axis of rotation.
+---@param ay number # The y component of the axis of rotation.
+---@param az number # The z component of the axis of rotation.
 ---@param blend? number # A number from 0 to 1 indicating how much of the target transform to blend in.  A value of 0 will not change the node's transform at all, whereas 1 will fully blend to the target transform.
-function Model:setNodeTransform(index, transform, blend) end
+function Model:setNodeTransform(index, x, y, z, sx, sy, sz, angle, ax, ay, az, blend) end
 
 ---
 ---Pass objects are used to record commands for the GPU.
@@ -1477,7 +1595,7 @@ local Pass = {}
 ---
 ---Similar to `Pass:copy`, except the source and destination sizes can be different.
 ---
----The pixels from the source texture will be scaled to the destination size.
+---The pixels from the source texture will be scaled to the destination size. This can only be called on a transfer pass, which can be created with `lovr.graphics.getPass`.
 ---
 ---
 ---### NOTE:
@@ -1509,9 +1627,20 @@ function Pass:blit(src, dst, srcx, srcy, srcz, dstx, dsty, dstz, srcw, srch, src
 ---
 ---This is like `Pass:cube`, except it takes 3 separate values for the scale.
 ---
----@param transform lovr.Mat4 # The transform of the box.  Can also be provided as position, 3-component scale, and rotation using a mix of `Vectors` or numbers.
+---@overload fun(self: lovr.Pass, position: lovr.Vec3, size: lovr.Vec3, orientation: lovr.Quat, style?: lovr.DrawStyle)
+---@overload fun(self: lovr.Pass, transform: lovr.Mat4, style?: lovr.DrawStyle)
+---@param x? number # The x coordinate of the center of the box.
+---@param y? number # The y coordinate of the center of the box.
+---@param z? number # The z coordinate of the center of the box.
+---@param width? number # The width of the box.
+---@param height? number # The height of the box.
+---@param depth? number # The depth of the box.
+---@param angle? number # The rotation of the box around its rotation axis, in radians.
+---@param ax? number # The x component of the axis of rotation.
+---@param ay? number # The y component of the axis of rotation.
+---@param az? number # The z component of the axis of rotation.
 ---@param style? lovr.DrawStyle # Whether the box should be drawn filled or outlined.
-function Pass:box(transform, style) end
+function Pass:box(x, y, z, width, height, depth, angle, ax, ay, az, style) end
 
 ---
 ---Draws a capsule.
@@ -1524,27 +1653,50 @@ function Pass:box(transform, style) end
 ---
 ---The local origin of the capsule is in the center, and the local z axis points towards the end caps.
 ---
+---@overload fun(self: lovr.Pass, position: lovr.Vec3, scale: lovr.Vec3, orientation: lovr.Quat, segments?: number)
+---@overload fun(self: lovr.Pass, transform: lovr.Mat4, segments?: number)
 ---@overload fun(self: lovr.Pass, p1: lovr.Vec3, p2: lovr.Vec3, radius?: number, segments?: number)
----@param transform lovr.Mat4 # The transform of the capsule.  Can also be provided as position, scale, and rotation using a mix of `Vectors` or numbers.  When using numbers for the scale, 2 should be provided: one for the radius and one for the length.  When using a matrix or a vector for the scale, the X and Y components are the radius and the Z component is the length.
+---@param x? number # The x coordinate of the center of the capsule.
+---@param y? number # The y coordinate of the center of the capsule.
+---@param z? number # The z coordinate of the center of the capsule.
+---@param radius? number # The radius of the capsule.
+---@param length? number # The length of the capsule.
+---@param angle? number # The rotation of the capsule around its rotation axis, in radians.
+---@param ax? number # The x component of the axis of rotation.
+---@param ay? number # The y component of the axis of rotation.
+---@param az? number # The z component of the axis of rotation.
 ---@param segments? number # The number of circular segments to render.
-function Pass:capsule(transform, segments) end
+function Pass:capsule(x, y, z, radius, length, angle, ax, ay, az, segments) end
 
 ---
 ---Draws a circle.
 ---
 ---
 ---### NOTE:
----The local origin of the circle is in its center, and the local z axis goes through the center.
+---The local origin of the circle is in its center.
 ---
----@param transform lovr.Mat4 # The transform of the circle.  Can also be provided as position, radius, and rotation, using a mix of `Vectors` or numbers.
+---The local z axis is perpendicular to the circle.
+---
+---@overload fun(self: lovr.Pass, position: lovr.Vec3, radius?: number, orientation: lovr.Quat, style?: lovr.DrawStyle, angle1?: number, angle2?: number, segments?: number)
+---@overload fun(self: lovr.Pass, transform: lovr.Mat4, style?: lovr.DrawStyle, angle1?: number, angle2?: number, segments?: number)
+---@param x? number # The x coordinate of the center of the circle.
+---@param y? number # The y coordinate of the center of the circle.
+---@param z? number # The z coordinate of the center of the circle.
+---@param radius? number # The radius of the circle.
+---@param angle? number # The rotation of the circle around its rotation axis, in radians.
+---@param ax? number # The x component of the axis of rotation.
+---@param ay? number # The y component of the axis of rotation.
+---@param az? number # The z component of the axis of rotation.
 ---@param style? lovr.DrawStyle # Whether the circle should be filled or outlined.
 ---@param angle1? number # The angle of the beginning of the arc.
 ---@param angle2? number # angle of the end of the arc.
 ---@param segments? number # The number of segments to render.
-function Pass:circle(transform, style, angle1, angle2, segments) end
+function Pass:circle(x, y, z, radius, angle, ax, ay, az, style, angle1, angle2, segments) end
 
 ---
 ---Clears a Buffer or Texture.
+---
+---This can only be called on a transfer pass, which can be created with `lovr.graphics.getPass`.
 ---
 ---@overload fun(self: lovr.Pass, texture: lovr.Texture, color: lovr.Vec4, layer?: number, layers?: number, level?: number, levels?: number)
 ---@param buffer lovr.Buffer # The Buffer to clear.
@@ -1555,24 +1707,59 @@ function Pass:clear(buffer, index, count) end
 ---
 ---Runs a compute shader.
 ---
----Compute shaders are run in 3D grids of workgroups.
+---Before calling this, a compute shader needs to be active, using `Pass:setShader`.
 ---
----Each local workgroup is itself a 3D grid of invocations, declared using `local_size_x`, `local_size_y`, and `local_size_z` in the shader code.
+---This can only be called on a Pass with the `compute` type, which can be created using `lovr.graphics.getPass`.
 ---
 ---
 ---### NOTE:
----All these 3D grids can get confusing, but the basic idea is to make the local workgroup size a small block of e.g. 8x8 pixels or 4x4x4 voxels, and then dispatch however many global workgroups are needed to cover an image or voxel field.
+---Usually compute shaders are run many times in parallel: once for each pixel in an image, once per particle, once per object, etc.
 ---
----The reason to do it this way is that the GPU runs invocations in bundles called subgroups.
+---The 3 arguments represent how many times to run, or "dispatch", the compute shader, in up to 3 dimensions.
 ---
----Subgroups are usually 32 or 64 invocations (the exact size is given by the `subgroupSize` property of `lovr.graphics.getDevice`).
+---Each element of this grid is called a **workgroup**.
 ---
----If the local workgroup size was `1x1x1`, then the GPU would only run 1 invocation per subgroup and waste the other 31 or 63.
+---To make things even more complicated, each workgroup itself is made up of a set of "mini GPU threads", which are called **local workgroups**.
+---
+---Like workgroups, the local workgroup size can also be 3D.
+---
+---It's declared in the shader code, like this:
+---
+---    layout(local_size_x = w, local_size_y = h, local_size_z = d) in;
+---
+---All these 3D grids can get confusing, but the basic idea is to make the local workgroup size a small block of e.g. 32 particles or 8x8 pixels or 4x4x4 voxels, and then dispatch however many workgroups are needed to cover a list of particles, image, voxel field, etc.
+---
+---The reason to do it this way is that the GPU runs its threads in little fixed-size bundles called subgroups.
+---
+---Subgroups are usually 32 or 64 threads (the exact size is given by the `subgroupSize` property of `lovr.graphics.getDevice`) and all run together.
+---
+---If the local workgroup size was `1x1x1`, then the GPU would only run 1 thread per subgroup and waste the other 31 or 63.
+---
+---So for the best performance, be sure to set a local workgroup size bigger than 1!
+---
+---Inside the compute shader, a few builtin variables can be used to figure out which workgroup is running:
+---
+---- `uvec3 WorkgroupCount` is the workgroup count per axis (the `Pass:compute` arguments).
+---- `uvec3 WorkgroupSize` is the local workgroup size (declared in the shader).
+---- `uvec3 WorkgroupID` is the index of the current (global) workgroup.
+---- `uvec3 LocalThreadID` is the index of the local workgroup inside its workgroup.
+---- `uint LocalThreadIndex` is a 1D version of `LocalThreadID`.
+---- `uvec3 GlobalThreadID` is the unique identifier for a thread within all workgroups in a
+---  dispatch. It's equivalent to `WorkgroupID * WorkgroupSize + LocalThreadID` (usually what you
+---  want!)
+---
+---Indirect compute dispatches are useful to "chain" compute shaders together, while keeping all of the data on the GPU.
+---
+---The first dispatch can do some computation and write some results to buffers, then the second indirect dispatch can use the data in those buffers to know how many times it should run.
+---
+---An example would be a compute shader that does some sort of object culling, writing the number of visible objects to a buffer along with the IDs of each one. Subsequent compute shaders can be indirectly dispatched to perform extra processing on the visible objects.
+---
+---Finally, an indirect draw can be used to render them.
 ---
 ---@overload fun(self: lovr.Pass, buffer: lovr.Buffer, offset?: number)
----@param x? number # How many workgroups to dispatch in the x dimension.
----@param y? number # How many workgroups to dispatch in the y dimension.
----@param z? number # How many workgroups to dispatch in the z dimension.
+---@param x? number # The number of workgroups to dispatch in the x dimension.
+---@param y? number # The number of workgroups to dispatch in the y dimension.
+---@param z? number # The number of workgroups to dispatch in the z dimension.
 function Pass:compute(x, y, z) end
 
 ---
@@ -1582,14 +1769,25 @@ function Pass:compute(x, y, z) end
 ---### NOTE:
 ---The local origin is at the center of the base of the cone, and the negative z axis points towards the tip.
 ---
----@param transform lovr.Mat4 # The transform of the cone.  Can also be provided as position, scale, and rotation using a mix of `Vectors` or numbers.  When using numbers for the scale, 2 should be provided: one for the radius and one for the length.  When using a matrix or a vector for the scale, the X and Y components are the radius and the Z component is the length.
+---@overload fun(self: lovr.Pass, position: lovr.Vec3, scale: lovr.Vec3, orientation: lovr.Quat, segments?: number)
+---@overload fun(self: lovr.Pass, transform: lovr.Mat4, segments?: number)
+---@overload fun(self: lovr.Pass, p1: lovr.Vec3, p2: lovr.Vec3, radius?: number, segments?: number)
+---@param x? number # The x coordinate of the center of the base of the cone.
+---@param y? number # The y coordinate of the center of the base of the cone.
+---@param z? number # The z coordinate of the center of the base of the cone.
+---@param radius? number # The radius of the cone.
+---@param length? number # The length of the cone.
+---@param angle? number # The rotation of the cone around its rotation axis, in radians.
+---@param ax? number # The x component of the axis of rotation.
+---@param ay? number # The y component of the axis of rotation.
+---@param az? number # The z component of the axis of rotation.
 ---@param segments? number # The number of segments in the cone.
-function Pass:cone(transform, segments) end
+function Pass:cone(x, y, z, radius, length, angle, ax, ay, az, segments) end
 
 ---
 ---Copies data to or between `Buffer` and `Texture` objects.
 ---
----This function must be called on a `transfer` pass.
+---This can only be called on a transfer pass, which can be created with `lovr.graphics.getPass`.
 ---
 ---@overload fun(self: lovr.Pass, blob: lovr.Blob, bufferdst: lovr.Buffer, srcoffset?: number, dstoffset?: number, size?: number)
 ---@overload fun(self: lovr.Pass, buffersrc: lovr.Buffer, bufferdst: lovr.Buffer, srcoffset?: number, dstoffset?: number, size?: number)
@@ -1610,9 +1808,18 @@ function Pass:copy(table, bufferdst, srcindex, dstindex, count) end
 ---### NOTE:
 ---The local origin is in the center of the cube.
 ---
----@param transform lovr.Mat4 # The transform of the cube.  Can also be provided as position, 1-component scale, and rotation using a mix of `Vectors` or numbers.
+---@overload fun(self: lovr.Pass, position: lovr.Vec3, size?: number, orientation: lovr.Quat, style?: lovr.DrawStyle)
+---@overload fun(self: lovr.Pass, transform: lovr.Mat4, style?: lovr.DrawStyle)
+---@param x? number # The x coordinate of the center of the cube.
+---@param y? number # The y coordinate of the center of the cube.
+---@param z? number # The z coordinate of the center of the cube.
+---@param size? number # The size of the cube.
+---@param angle? number # The rotation of the cube around its rotation axis, in radians.
+---@param ax? number # The x component of the axis of rotation.
+---@param ay? number # The y component of the axis of rotation.
+---@param az? number # The z component of the axis of rotation.
 ---@param style? lovr.DrawStyle # Whether the cube should be drawn filled or outlined.
-function Pass:cube(transform, style) end
+function Pass:cube(x, y, z, size, angle, ax, ay, az, style) end
 
 ---
 ---Draws a cylinder.
@@ -1621,24 +1828,45 @@ function Pass:cube(transform, style) end
 ---### NOTE:
 ---The local origin is in the center of the cylinder, and the length of the cylinder is along the z axis.
 ---
----@overload fun(self: lovr.Pass, p1: lovr.Vec3, p2: lovr.Vec3, radius: number, capped?: boolean, angle1?: number, angle2?: number, segments?: number)
----@param transform lovr.Mat4 # The transform of the cylinder.  Can also be provided as position, scale, and rotation using a mix of `Vectors` or numbers.  When using numbers for the scale, 2 should be provided: one for the radius and one for the length.  When using a matrix or a vector for the scale, the X and Y components are the radius and the Z component is the length.
+---@overload fun(self: lovr.Pass, position: lovr.Vec3, scale: lovr.Vec3, orientation: lovr.Quat, capped?: boolean, angle1?: number, angle2?: number, segments?: number)
+---@overload fun(self: lovr.Pass, transform: lovr.Mat4, capped?: boolean, angle1?: number, angle2?: number, segments?: number)
+---@overload fun(self: lovr.Pass, p1: lovr.Vec3, p2: lovr.Vec3, radius?: number, capped?: boolean, angle1?: number, angle2?: number, segments?: number)
+---@param x? number # The x coordinate of the center of the cylinder.
+---@param y? number # The y coordinate of the center of the cylinder.
+---@param z? number # The z coordinate of the center of the cylinder.
+---@param radius? number # The radius of the cylinder.
+---@param length? number # The length of the cylinder.
+---@param angle? number # The rotation of the cylinder around its rotation axis, in radians.
+---@param ax? number # The x component of the axis of rotation.
+---@param ay? number # The y component of the axis of rotation.
+---@param az? number # The z component of the axis of rotation.
 ---@param capped? boolean # Whether the tops and bottoms of the cylinder should be rendered.
 ---@param angle1? number # The angle of the beginning of the arc.
 ---@param angle2? number # angle of the end of the arc.
 ---@param segments? number # The number of circular segments to render.
-function Pass:cylinder(transform, capped, angle1, angle2, segments) end
+function Pass:cylinder(x, y, z, radius, length, angle, ax, ay, az, capped, angle1, angle2, segments) end
 
 ---
 ---Draws a model.
 ---
+---@overload fun(self: lovr.Pass, model: lovr.Model, position: lovr.Vec3, scale?: number, orientation: lovr.Quat, nodeindex?: number, children?: boolean, instances?: number)
+---@overload fun(self: lovr.Pass, model: lovr.Model, transform: lovr.Mat4, nodeindex?: number, children?: boolean, instances?: number)
+---@overload fun(self: lovr.Pass, model: lovr.Model, x?: number, y?: number, z?: number, scale?: number, angle?: number, ax?: number, ay?: number, az?: number, nodename?: string, children?: boolean, instances?: number)
+---@overload fun(self: lovr.Pass, model: lovr.Model, position: lovr.Vec3, scale?: number, orientation: lovr.Quat, nodename?: string, children?: boolean, instances?: number)
 ---@overload fun(self: lovr.Pass, model: lovr.Model, transform: lovr.Mat4, nodename?: string, children?: boolean, instances?: number)
 ---@param model lovr.Model # The model to draw.
----@param transform lovr.Mat4 # The transform of the model.  Can also be provided as a position, 1-component scale, and rotation using a combination of `Vectors` and numbers.
+---@param x? number # The x coordinate to draw the model at.
+---@param y? number # The y coordinate to draw the model at.
+---@param z? number # The z coordinate to draw the model at.
+---@param scale? number # The scale of the model.
+---@param angle? number # The rotation of the model around its rotation axis, in radians.
+---@param ax? number # The x component of the axis of rotation.
+---@param ay? number # The y component of the axis of rotation.
+---@param az? number # The z component of the axis of rotation.
 ---@param nodeindex? number # The index of the node to draw.  If nil, the root node is drawn.
 ---@param children? boolean # Whether the children of the node should be drawn.
 ---@param instances? number # The number of instances to draw.
-function Pass:draw(model, transform, nodeindex, children, instances) end
+function Pass:draw(model, x, y, z, scale, angle, ax, ay, az, nodeindex, children, instances) end
 
 ---
 ---Draws a fullscreen triangle.
@@ -1714,6 +1942,7 @@ function Pass:getTarget() end
 ---
 ---The type restricts what kinds of functions can be called on the pass.
 ---
+---@return lovr.PassType type # The type of the Pass.
 function Pass:getType() end
 
 ---
@@ -1783,24 +2012,38 @@ function Pass:line(x1, y1, z1, x2, y2, z2, ...) end
 ---
 ---It can be used to reorder, reuse, or omit vertices from the mesh.
 ---
+---When drawing without a vertex buffer, the `VertexIndex` variable can be used in shaders to compute the position of each vertex, possibly by reading data from other `Buffer` or `Texture` resources.
+---
 ---The active `MeshMode` controls whether the vertices are drawn as points, lines, or triangles.
 ---
 ---The active `Material` is applied to the mesh.
 ---
+---@overload fun(self: lovr.Pass, vertices?: lovr.Buffer, position: lovr.Vec3, scales: lovr.Vec3, orientation: lovr.Quat, start?: number, count?: number, instances?: number)
+---@overload fun(self: lovr.Pass, vertices?: lovr.Buffer, transform: lovr.Mat4, start?: number, count?: number, instances?: number)
+---@overload fun(self: lovr.Pass, vertices?: lovr.Buffer, indices: lovr.Buffer, x?: number, y?: number, z?: number, scale?: number, angle?: number, ax?: number, ay?: number, az?: number, start?: number, count?: number, instances?: number, base?: number)
+---@overload fun(self: lovr.Pass, vertices?: lovr.Buffer, indices: lovr.Buffer, position: lovr.Vec3, scales: lovr.Vec3, orientation: lovr.Quat, start?: number, count?: number, instances?: number, base?: number)
 ---@overload fun(self: lovr.Pass, vertices?: lovr.Buffer, indices: lovr.Buffer, transform: lovr.Mat4, start?: number, count?: number, instances?: number, base?: number)
 ---@overload fun(self: lovr.Pass, vertices?: lovr.Buffer, indices: lovr.Buffer, draws: lovr.Buffer, drawcount: number, offset: number, stride: number)
----@overload fun(self: lovr.Pass, vertexcount: number, transform: lovr.Mat4)
----@overload fun(self: lovr.Pass, vertexcount: number, indices: lovr.Buffer, transform: lovr.Mat4)
 ---@param vertices? lovr.Buffer # The buffer containing the vertices to draw.
----@param transform lovr.Mat4 # The transform to apply to the mesh.  Can also be provided as a position, 1-component scale, and rotation using a combination of `Vectors` and numbers.
+---@param x? number # The x coordinate of the position to draw the mesh at.
+---@param y? number # The y coordinate of the position to draw the mesh at.
+---@param z? number # The z coordinate of the position to draw the mesh at.
+---@param scale? number # The scale of the mesh.
+---@param angle? number # The number of radians the mesh is rotated around its rotational axis.
+---@param ax? number # The x component of the axis of rotation.
+---@param ay? number # The y component of the axis of rotation.
+---@param az? number # The z component of the axis of rotation.
 ---@param start? number # The 1-based index of the first vertex to render from the vertex buffer (or the first index, when using an index buffer).
 ---@param count? number # The number of vertices to render (or the number of indices, when using an index buffer). When `nil`, as many vertices or indices as possible will be drawn (based on the length of the Buffers and `start`).
 ---@param instances? number # The number of copies of the mesh to render.
----@param base? number # A base offset to apply to vertex indices.
-function Pass:mesh(vertices, transform, start, count, instances, base) end
+function Pass:mesh(vertices, x, y, z, scale, angle, ax, ay, az, start, count, instances) end
 
 ---
 ---Generates mipmaps for a texture.
+---
+---This can only be called on a transfer pass, which can be created with `lovr.graphics.getPass`.
+---
+---When rendering to textures with a render pass, it's also possible to automatically regenerate mipmaps after rendering by adding the `mipmaps` flag when creating the pass.
 ---
 ---@param texture lovr.Texture # The texture to mipmap.
 ---@param base? number # The index of the mipmap used to generate the remaining mipmaps.
@@ -1815,11 +2058,21 @@ function Pass:origin() end
 ---
 ---Draws a plane.
 ---
----@param transform lovr.Mat4 # The transform of the plane.  Can also be provided as a position, 2-component scale, and rotation using a combination of `Vectors`, and numbers.
+---@overload fun(self: lovr.Pass, position: lovr.Vec3, size: lovr.Vec2, orientation: lovr.Quat, style?: lovr.DrawStyle, columns?: number, rows?: number)
+---@overload fun(self: lovr.Pass, transform: lovr.Mat4, style?: lovr.DrawStyle, columns?: number, rows?: number)
+---@param x? number # The x coordinate of the center of the plane.
+---@param y? number # The y coordinate of the center of the plane.
+---@param z? number # The z coordinate of the center of the plane.
+---@param width? number # The width of the plane.
+---@param height? number # The height of the plane.
+---@param angle? number # The rotation of the plane around its rotation axis, in radians.
+---@param ax? number # The x component of the axis of rotation.
+---@param ay? number # The y component of the axis of rotation.
+---@param az? number # The z component of the axis of rotation.
 ---@param style? lovr.DrawStyle # Whether the plane should be drawn filled or outlined.
 ---@param columns? number # The number of horizontal segments in the plane.
 ---@param rows? number # The number of vertical segments in the plane.
-function Pass:plane(transform, style, columns, rows) end
+function Pass:plane(x, y, z, width, height, angle, ax, ay, az, style, columns, rows) end
 
 ---
 ---Draws points.
@@ -1871,7 +2124,9 @@ function Pass:push(stack) end
 ---
 ---Creates a `Readback` object which asynchronously downloads data from a `Buffer`, `Texture`, or `Tally`.
 ---
----The readback can be polled for completion, or, after this transfer pass is completed, `Readback:wait` can be used to block until the download is complete.
+---The readback can be polled for completion, or, after this transfer pass is submitted, `Readback:wait` can be used to block until the download is complete.
+---
+---This can only be called on a transfer pass, which can be created with `lovr.graphics.getPass`.
 ---
 ---@overload fun(self: lovr.Pass, texture: lovr.Texture, x?: number, y?: number, layer?: number, level?: number, width?: number, height?: number):lovr.Readback
 ---@overload fun(self: lovr.Pass, tally: lovr.Tally, index: number, count: number):lovr.Readback
@@ -1884,19 +2139,45 @@ function Pass:read(buffer, index, count) end
 ---
 ---Rotates the coordinate system.
 ---
----@param rotation lovr.Quat # A quaternion containing the rotation to apply.  Can also be provided as 4 numbers in angle-axis representation.
-function Pass:rotate(rotation) end
+---@overload fun(self: lovr.Pass, rotation: lovr.Quat)
+---@param angle number # The amount to rotate the coordinate system by, in radians.
+---@param ax number # The x component of the axis of rotation.
+---@param ay number # The y component of the axis of rotation.
+---@param az number # The z component of the axis of rotation.
+function Pass:rotate(angle, ax, ay, az) end
+
+---
+---Draws a rounded rectangle.
+---
+---@overload fun(self: lovr.Pass, position: lovr.Vec3, size: lovr.Vec3, orientation: lovr.Quat, radius?: number, segments?: number)
+---@overload fun(self: lovr.Pass, transform: lovr.Mat4, radius?: number, segments?: number)
+---@param x? number # The x coordinate of the center of the rectangle.
+---@param y? number # The y coordinate of the center of the rectangle.
+---@param z? number # The z coordinate of the center of the rectangle.
+---@param width? number # The width of the rectangle.
+---@param height? number # The height of the rectangle.
+---@param thickness? number # The thickness of the rectangle.
+---@param angle? number # The rotation of the rectangle around its rotation axis, in radians.
+---@param ax? number # The x component of the axis of rotation.
+---@param ay? number # The y component of the axis of rotation.
+---@param az? number # The z component of the axis of rotation.
+---@param radius? number # The radius of the rectangle corners.  If the radius is zero or negative, the rectangle will have sharp corners.
+---@param segments? number # The number of circular segments to use for each corner.  This increases the smoothness, but increases the number of vertices in the mesh.
+function Pass:roundrect(x, y, z, width, height, thickness, angle, ax, ay, az, radius, segments) end
 
 ---
 ---Scales the coordinate system.
 ---
----@param scale lovr.Vec3 # The scale to apply to the coordinate system.  Can also be provided as 1 or 3 numbers.
-function Pass:scale(scale) end
+---@overload fun(self: lovr.Pass, scale: lovr.Vec3)
+---@param sx number # The x component of the scale.
+---@param sy? number # The y component of the scale.
+---@param sz? number # The z component of the scale.
+function Pass:scale(sx, sy, sz) end
 
 ---
 ---Sends a value to a variable in the Pass's active `Shader`.
 ---
----The active shader is changed using using `Pass:setShader`.
+---The active shader is changed using `Pass:setShader`.
 ---
 ---
 ---### NOTE:
@@ -1911,12 +2192,14 @@ function Pass:scale(scale) end
 ---@overload fun(self: lovr.Pass, name: string, texture: lovr.Texture)
 ---@overload fun(self: lovr.Pass, name: string, sampler: lovr.Sampler)
 ---@overload fun(self: lovr.Pass, name: string, constant: any)
----@overload fun(self: lovr.Pass, binding: number, buffer: lovr.Buffer)
+---@overload fun(self: lovr.Pass, binding: number, buffer: lovr.Buffer, offset?: number, extent?: number)
 ---@overload fun(self: lovr.Pass, binding: number, texture: lovr.Texture)
 ---@overload fun(self: lovr.Pass, binding: number, sampler: lovr.Sampler)
 ---@param name string # The name of the Shader variable.
 ---@param buffer lovr.Buffer # The Buffer to assign.
-function Pass:send(name, buffer) end
+---@param offset? number # An offset from the start of the buffer where data will be read, in bytes.
+---@param extent? number # The number of bytes that will be available for reading.  If zero, as much data as possible will be bound, depending on the offset, buffer size, and the `uniformBufferRange` or `storageBufferRange` limit.
+function Pass:send(name, buffer, offset, extent) end
 
 ---
 ---Sets whether alpha to coverage is enabled.
@@ -1943,6 +2226,7 @@ function Pass:setAlphaToCoverage(enable) end
 ---### NOTE:
 ---The default blend mode is `alpha` with the `alphamultiply` alpha mode.
 ---
+---@overload fun(self: lovr.Pass)
 ---@param blend lovr.BlendMode # The blend mode.
 ---@param alphaBlend lovr.BlendAlphaMode # The alpha blend mode, used to control premultiplied alpha.
 function Pass:setBlendMode(blend, alphaBlend) end
@@ -2179,6 +2463,10 @@ function Pass:setShader(shader) end
 ---### NOTE:
 ---The stencil test is disabled by default.
 ---
+---Setting the stencil test requires the `Pass` to have a depth texture with the `d24s8` or `d32fs8` format (the `s` means "stencil").
+---
+---The `t.graphics.stencil` and `t.headset.stencil` flags in `lovr.conf` can be used to request a stencil format for the default window and headset passes, respectively.
+---
 ---@overload fun(self: lovr.Pass)
 ---@param test lovr.CompareMode # The new stencil test to use.
 ---@param value number # The stencil value to compare against.
@@ -2193,6 +2481,10 @@ function Pass:setStencilTest(test, value, mask) end
 ---
 ---### NOTE:
 ---By default, stencil writes are disabled.
+---
+---Setting the stencil test requires the `Pass` to have a depth texture with the `d24s8` or `d32fs8` format (the `s` means "stencil").
+---
+---The `t.graphics.stencil` and `t.headset.stencil` flags in `lovr.conf` can be used to request a stencil format for the default window and headset passes, respectively.
 ---
 ---@overload fun(self: lovr.Pass, actions: table, value?: number, mask?: number)
 ---@overload fun(self: lovr.Pass)
@@ -2212,6 +2504,7 @@ function Pass:setStencilWrite(action, value, mask) end
 ---
 ---These view poses are also available using `lovr.headset.getViewPose`.
 ---
+---@overload fun(self: lovr.Pass, view: number, position: lovr.Vec3, orientation: lovr.Quat)
 ---@overload fun(self: lovr.Pass, view: number, matrix: lovr.Mat4, inverted: boolean)
 ---@param view number # The index of the view to update.
 ---@param x number # The x position of the viewer, in meters.
@@ -2296,10 +2589,19 @@ function Pass:skybox(skybox) end
 ---### NOTE:
 ---The local origin of the sphere is in its center.
 ---
----@param transform lovr.Mat4 # The transform of the sphere.  Can also be provided as a position, radius, and rotation using a mix of `Vectors and numbers.'
+---@overload fun(self: lovr.Pass, position: lovr.Vec3, radius?: number, orientation: lovr.Quat, longitudes?: number, latitudes?: number)
+---@overload fun(self: lovr.Pass, transform: lovr.Mat4, longitudes?: number, latitudes?: number)
+---@param x? number # The x coordinate of the center of the sphere.
+---@param y? number # The y coordinate of the center of the sphere.
+---@param z? number # The z coordinate of the center of the sphere.
+---@param radius? number # The radius of the sphere.
+---@param angle? number # The rotation of the sphere around its rotation axis, in radians.
+---@param ax? number # The x component of the axis of rotation.
+---@param ay? number # The y component of the axis of rotation.
+---@param az? number # The z component of the axis of rotation.
 ---@param longitudes? number # The number of "horizontal" segments.
 ---@param latitudes? number # The number of "vertical" segments.
-function Pass:sphere(transform, longitudes, latitudes) end
+function Pass:sphere(x, y, z, radius, angle, ax, ay, az, longitudes, latitudes) end
 
 ---
 ---Draws text.
@@ -2326,13 +2628,24 @@ function Pass:sphere(transform, longitudes, latitudes) end
 ---
 ---This function can draw up to 16384 visible characters at a time, and will currently throw an error if the string is too long.
 ---
+---@overload fun(self: lovr.Pass, text: string, position: lovr.Vec3, scale?: number, orientation: lovr.Quat, wrap?: number, halign?: lovr.HorizontalAlign, valign?: lovr.VerticalAlign)
+---@overload fun(self: lovr.Pass, text: string, transform: lovr.Mat4, wrap?: number, halign?: lovr.HorizontalAlign, valign?: lovr.VerticalAlign)
+---@overload fun(self: lovr.Pass, colortext: table, x?: number, y?: number, z?: number, scale?: number, angle?: number, ax?: number, ay?: number, az?: number, wrap?: number, halign?: lovr.HorizontalAlign, valign?: lovr.VerticalAlign)
+---@overload fun(self: lovr.Pass, colortext: table, position: lovr.Vec3, scale?: number, orientation: lovr.Quat, wrap?: number, halign?: lovr.HorizontalAlign, valign?: lovr.VerticalAlign)
 ---@overload fun(self: lovr.Pass, colortext: table, transform: lovr.Mat4, wrap?: number, halign?: lovr.HorizontalAlign, valign?: lovr.VerticalAlign)
 ---@param text string # The text to render.
----@param transform lovr.Mat4 # The transform of the text.  Can also be provided as position, 1-component scale, and rotation using a mix of `Vectors` or numbers.
+---@param x? number # The x coordinate of the text origin.
+---@param y? number # The y coordinate of the text origin.
+---@param z? number # The z coordinate of the text origin.
+---@param scale? number # The scale of the text (with the default pixel density, units are meters).
+---@param angle? number # The rotation of the text around its rotation axis, in radians.
+---@param ax? number # The x component of the axis of rotation.
+---@param ay? number # The y component of the axis of rotation.
+---@param az? number # The z component of the axis of rotation.
 ---@param wrap? number # The maximum width of each line in meters (before scale is applied).  When zero, the text will not wrap.
----@param halign? lovr.HorizontalAlign # The horizontal alignment.
----@param valign? lovr.VerticalAlign # The vertical alignment.
-function Pass:text(text, transform, wrap, halign, valign) end
+---@param halign? lovr.HorizontalAlign # The horizontal alignment relative to the text origin.
+---@param valign? lovr.VerticalAlign # The vertical alignment relative to the text origin.
+function Pass:text(text, x, y, z, scale, angle, ax, ay, az, wrap, halign, valign) end
 
 ---
 ---Starts a GPU measurement.
@@ -2369,16 +2682,37 @@ function Pass:tock(tally, slot) end
 ---### NOTE:
 ---The local origin is in the center of the torus, and the torus forms a circle around the local Z axis.
 ---
----@param transform lovr.Mat4 # The transform of the torus.  Can also be provided as position, scale, and rotation using a mix of `Vectors` or numbers.  When using numbers for the scale, 2 should be provided: one for the radius and one for the thickness.  When using a matrix or a vector for the scale, the X and Y components are the radius and the Z component is the thickness.
+---@overload fun(self: lovr.Pass, position: lovr.Vec3, scale: lovr.Vec3, orientation: lovr.Quat, tsegments?: number, psegments?: number)
+---@overload fun(self: lovr.Pass, transform: lovr.Mat4, tsegments?: number, psegments?: number)
+---@param x? number # The x coordinate of the center of the torus.
+---@param y? number # The y coordinate of the center of the torus.
+---@param z? number # The z coordinate of the center of the torus.
+---@param radius? number # The radius of the torus.
+---@param thickness? number # The thickness of the torus.
+---@param angle? number # The rotation of the torus around its rotation axis, in radians.
+---@param ax? number # The x component of the axis of rotation.
+---@param ay? number # The y component of the axis of rotation.
+---@param az? number # The z component of the axis of rotation.
 ---@param tsegments? number # The number of toroidal (circular) segments to render.
 ---@param psegments? number # The number of poloidal (tubular) segments to render.
-function Pass:torus(transform, tsegments, psegments) end
+function Pass:torus(x, y, z, radius, thickness, angle, ax, ay, az, tsegments, psegments) end
 
 ---
 ---Transforms the coordinate system.
 ---
----@param transform lovr.Mat4 # A matrix containing the transformation to apply to the coordinate system.  Can also be provided as a position, 3-component scale, and rotation, using a mix of `Vectors` or numbers.
-function Pass:transform(transform) end
+---@overload fun(self: lovr.Pass, translation: lovr.Vec3, scale: lovr.Vec3, rotation: lovr.Quat)
+---@overload fun(self: lovr.Pass, transform: lovr.Mat4)
+---@param x number # The x component of the translation.
+---@param y number # The y component of the translation.
+---@param z number # The z component of the translation.
+---@param sx number # The x component of the scale.
+---@param sy number # The y component of the scale.
+---@param sz number # The z component of the scale.
+---@param angle number # The amount to rotate the coordinate system by, in radians.
+---@param ax number # The x component of the axis of rotation.
+---@param ay number # The y component of the axis of rotation.
+---@param az number # The z component of the axis of rotation.
+function Pass:transform(x, y, z, sx, sy, sz, angle, ax, ay, az) end
 
 ---
 ---Translates the coordinate system.
@@ -2387,8 +2721,11 @@ function Pass:transform(transform) end
 ---### NOTE:
 ---Order matters when scaling, translating, and rotating the coordinate system.
 ---
----@param translation lovr.Vec3 # The translation to apply to the coordinate system.  Can also be provided as 3 numbers.
-function Pass:translate(translation) end
+---@overload fun(self: lovr.Pass, translation: lovr.Vec3)
+---@param x number # The x component of the translation.
+---@param y number # The y component of the translation.
+---@param z number # The z component of the translation.
+function Pass:translate(x, y, z) end
 
 ---
 ---Readbacks track the progress of an asynchronous read of a `Buffer`, `Texture`, or `Tally`.
@@ -3134,6 +3471,14 @@ function Texture:newView(type, layer, layerCount, mipmap, mipmapCount) end
 ---A 4x4 matrix containing sixteen 32-bit floats.
 ---
 ---| "mat4"
+---
+---Like u16, but 1-indexed.
+---
+---| "index16"
+---
+---Like u32, but 1-indexed.
+---
+---| "index32"
 
 ---
 ---Controls how `Sampler` objects smooth pixels in textures.

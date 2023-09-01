@@ -83,9 +83,9 @@ local function findNearestSource(state, position)
     return source
 end
 
-local function findNearestTableField(state, position)
-    local uri     = state.uri
-    local text    = files.getText(uri)
+local function findNearestTable(state, position)
+    local uri  = state.uri
+    local text = files.getText(uri)
     if not text then
         return nil
     end
@@ -101,13 +101,47 @@ local function findNearestTableField(state, position)
     local sposition = guide.offsetToPosition(state, soffset)
     local source
     guide.eachSourceContain(state.ast, sposition, function (src)
-        if src.type == 'table'
-        or src.type == 'tablefield'
-        or src.type == 'tableindex'
-        or src.type == 'tableexp' then
+        if src.type == 'table' then
             source = src
         end
     end)
+
+    if not source then
+        return nil
+    end
+
+    for _, field in ipairs(source) do
+        if field.start <= position and (field.range or field.finish) >= position then
+            if field.type == 'tableexp' then
+                if field.value.type == 'getlocal'
+                or field.value.type == 'getglobal' then
+                    if field.finish >= position then
+                        return source
+                    else
+                        return nil
+                    end
+                end
+            end
+            if field.type == 'tablefield' then
+                if field.finish >= position then
+                    return source
+                else
+                    return nil
+                end
+            end
+            if field.type == 'tableindex' then
+                if field.index and field.index.type == 'string' then
+                    if field.index.finish >= position then
+                        return source
+                    else
+                        return nil
+                    end
+                end
+            end
+            return nil
+        end
+    end
+
     return source
 end
 
@@ -409,6 +443,7 @@ local function checkFieldFromFieldToIndex(state, name, src, parent, word, startP
         or config.get(state.uri, 'Lua.runtime.unicodeName') then
             return nil
         end
+        name = ('%q'):format(name)
     end
     local textEdit, additionalTextEdits
     local startOffset = guide.positionToOffset(state, startPos)
@@ -425,12 +460,7 @@ local function checkFieldFromFieldToIndex(state, name, src, parent, word, startP
         wordStartOffset = offset - #word
     end
     local wordStartPos = guide.offsetToPosition(state, wordStartOffset)
-    local newText
-    if vm.getKeyType(src) == 'string' then
-        newText = ('[%q]'):format(name)
-    else
-        newText = ('[%s]'):format(name)
-    end
+    local newText = ('[%s]'):format(name)
     textEdit = {
         start   = wordStartPos,
         finish  = position,
@@ -474,7 +504,8 @@ local function checkFieldThen(state, name, src, word, startPos, position, parent
     local kind = define.CompletionItemKind.Field
     if (value.type == 'function' and not vm.isVarargFunctionWithOverloads(value))
     or value.type == 'doc.type.function' then
-        if oop then
+        local isMethod = value.parent.type == 'setmethod'
+        if isMethod then
             kind = define.CompletionItemKind.Method
         else
             kind = define.CompletionItemKind.Function
@@ -482,6 +513,7 @@ local function checkFieldThen(state, name, src, word, startPos, position, parent
         buildFunction(results, src, value, oop, {
             label      = name,
             kind       = kind,
+            isMethod   = isMethod,
             match      = name:match '^[^(]+',
             insertText = name:match '^[^(]+',
             deprecated = vm.getDeprecated(src) and true or nil,
@@ -507,7 +539,7 @@ local function checkFieldThen(state, name, src, word, startPos, position, parent
         textEdit = {
             start   = str.start + #str[2],
             finish  = position,
-            newText = name,
+            newText = name:sub(#str[2] + 1, - #str[2] - 1),
         }
     else
         textEdit, additionalTextEdits = checkFieldFromFieldToIndex(state, name, src, parent, word, startPos, position)
@@ -534,6 +566,10 @@ local function checkFieldOfRefs(refs, state, word, startPos, position, parent, o
     local funcs  = {}
     local count  = 0
     for _, src in ipairs(refs) do
+        if count > 100 then
+            results.incomplete = true
+            break
+        end
         local _, name = vm.viewKey(src, state.uri)
         if not name then
             goto CONTINUE
@@ -545,7 +581,7 @@ local function checkFieldOfRefs(refs, state, word, startPos, position, parent, o
         if isGlobal and locals and locals[name] then
             goto CONTINUE
         end
-        if not matchKey(word, name, count >= 100) then
+        if not matchKey(word, name:gsub([=[^['"]]=], ''), count >= 100) then
             goto CONTINUE
         end
         if not vm.isVisible(parent, src) then
@@ -571,7 +607,7 @@ local function checkFieldOfRefs(refs, state, word, startPos, position, parent, o
                     end
                 end
                 funcs[name] = true
-                if fields[name] and not guide.isSet(fields[name]) then
+                if fields[name] and not guide.isAssign(fields[name]) then
                     fields[name] = nil
                 end
                 goto CONTINUE
@@ -586,17 +622,48 @@ local function checkFieldOfRefs(refs, state, word, startPos, position, parent, o
         if vm.getDeprecated(src) then
             goto CONTINUE
         end
-        if guide.isSet(src) then
+        if guide.isAssign(src) then
             fields[name] = src
             goto CONTINUE
         end
         ::CONTINUE::
     end
+
+    local fieldResults = {}
     for name, src in util.sortPairs(fields) do
         if src then
-            checkFieldThen(state, name, src, word, startPos, position, parent, oop, results)
+            checkFieldThen(state, name, src, word, startPos, position, parent, oop, fieldResults)
             await.delay()
         end
+    end
+
+    local scoreMap = {}
+    for i, res in ipairs(fieldResults) do
+        scoreMap[res] = i
+    end
+    table.sort(fieldResults, function (a, b)
+        local score1 = scoreMap[a]
+        local score2 = scoreMap[b]
+        if oop then
+            if not a.isMethod then
+                score1 = score1 + 10000
+            end
+            if not b.isMethod then
+                score2 = score2 + 10000
+            end
+        else
+            if a.isMethod then
+                score1 = score1 + 10000
+            end
+            if b.isMethod then
+                score2 = score2 + 10000
+            end
+        end
+        return score1 < score2
+    end)
+
+    for _, res in ipairs(fieldResults) do
+        results[#results+1] = res
     end
 end
 
@@ -1184,6 +1251,46 @@ local function insertDocEnum(state, pos, doc, enums)
     return enums
 end
 
+---@param state     parser.state
+---@param pos       integer
+---@param doc       vm.node.object
+---@param enums     table[]
+---@return table[]?
+local function insertDocEnumKey(state, pos, doc, enums)
+    local tbl = doc.bindSource
+    if not tbl then
+        return nil
+    end
+    local keyEnums = {}
+    for _, field in ipairs(tbl) do
+        if field.type == 'tablefield'
+        or field.type == 'tableindex' then
+            if not field.value then
+                goto CONTINUE
+            end
+            local key = guide.getKeyName(field)
+            if not key then
+                goto CONTINUE
+            end
+            enums[#enums+1] = {
+                label  = ('%q'):format(key),
+                kind   = define.CompletionItemKind.EnumMember,
+                id     = stack(field, function (newField) ---@async
+                    return {
+                        detail      = buildDetail(newField),
+                        description = buildDesc(newField),
+                    }
+                end),
+            }
+            ::CONTINUE::
+        end
+    end
+    for _, enum in ipairs(keyEnums) do
+        enums[#enums+1] = enum
+    end
+    return enums
+end
+
 local function buildInsertDocFunction(doc)
     local args = {}
     for i, arg in ipairs(doc.args) do
@@ -1212,7 +1319,7 @@ local function insertEnum(state, pos, src, enums, isInArray, mark)
     or src.type == 'doc.type.boolean' then
         ---@cast src parser.object
         enums[#enums+1] = {
-            label       = vm.viewObject(src, state.uri),
+            label       = vm.getInfer(src):view(state.uri),
             description = src.comment,
             kind        = define.CompletionItemKind.EnumMember,
         }
@@ -1249,7 +1356,11 @@ local function insertEnum(state, pos, src, enums, isInArray, mark)
     elseif src.type == 'global' and src.cate == 'type' then
         for _, set in ipairs(src:getSets(state.uri)) do
             if set.type == 'doc.enum' then
-                insertDocEnum(state, pos, set, enums)
+                if vm.docHasAttr(set, 'key') then
+                    insertDocEnumKey(state, pos, set, enums)
+                else
+                    insertDocEnum(state, pos, set, enums)
+                end
             end
         end
     end
@@ -1505,14 +1616,13 @@ local function checkTableLiteralField(state, position, tbl, fields, results)
         end
     end
     if left then
-        local hasResult = false
+        local fieldResults = {}
         for _, field in ipairs(fields) do
             local name = guide.getKeyName(field)
             if  name
             and not mark[name]
             and matchKey(left, tostring(name)) then
-                hasResult = true
-                results[#results+1] = {
+                local res = {
                     label      = guide.getKeyName(field),
                     kind       = define.CompletionItemKind.Property,
                     id         = stack(field, function (newField) ---@async
@@ -1522,9 +1632,20 @@ local function checkTableLiteralField(state, position, tbl, fields, results)
                         }
                     end),
                 }
+                if field.optional
+                or vm.compileNode(field):isNullable() then
+                    res.insertText = res.label
+                    res.label      = res.label.. '?'
+                end
+                fieldResults[#fieldResults+1] = res
             end
         end
-        return hasResult
+        util.sortByScore(fieldResults, {
+            function (r) return r.insertText and 0 or 1 end,
+            util.sortCallbackOfIndex(fieldResults),
+        })
+        util.arrayMerge(results, fieldResults)
+        return #fieldResults > 0
     end
 end
 
@@ -1537,6 +1658,7 @@ local function tryCallArg(state, position, results)
     if arg and arg.type == 'function' then
         return
     end
+    ---@diagnostic disable-next-line: missing-fields
     local node = vm.compileCallArg({ type = 'dummyarg' }, call, argIndex)
     if not node then
         return
@@ -1553,20 +1675,15 @@ local function tryCallArg(state, position, results)
 end
 
 local function tryTable(state, position, results)
-    local source = findNearestTableField(state, position)
-    if not source then
+    local tbl = findNearestTable(state, position)
+    if not tbl then
         return false
     end
-    if  source.type ~= 'table'
-    and (not source.parent or source.parent.type ~= 'table') then
+    if  tbl.type ~= 'table' then
         return
     end
     local mark = {}
     local fields = {}
-    local tbl = source
-    if source.type ~= 'table' then
-        tbl = source.parent
-    end
 
     local defs = vm.getFields(tbl)
     for _, field in ipairs(defs) do

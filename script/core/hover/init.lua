@@ -86,7 +86,8 @@ local function getHover(source)
     else
         addHover(source, true, oop)
         for _, def in ipairs(vm.getDefs(source)) do
-            if def.type == 'global' then
+            if def.type == 'global'
+            or def.type == 'setlocal' then
                 goto CONTINUE
             end
             if guide.isOOP(def) then
@@ -137,7 +138,15 @@ local function getHoverByUri(uri, position)
     local hover = getHover(source)
     if SHOWSOURCE then
         hover:splitLine()
+        hover:add('md', 'Source Info')
         hover:add('lua', util.dump(source, {
+            deep = 1,
+        }))
+    end
+    if SHOWNODE then
+        hover:splitLine()
+        hover:add('md', 'Node Info')
+        hover:add('lua', util.dump(vm.compileNode(source), {
             deep = 1,
         }))
     end

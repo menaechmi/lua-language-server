@@ -10,6 +10,7 @@ local define   = require 'proto.define'
 rawset(_G, 'TEST', true)
 
 local CompletionItemKind = define.CompletionItemKind
+local NeedRemoveMeta = false
 
 local EXISTS = {}
 
@@ -60,7 +61,7 @@ function TEST(data)
     local mainUri
     local pos
     for _, info in ipairs(data) do
-        local uri = furi.encode(info.path)
+        local uri = furi.encode(TESTROOT .. info.path)
         local script = info.content or ''
         if info.main then
             local newScript, catched = catch(script, '?')
@@ -69,11 +70,12 @@ function TEST(data)
             mainUri = uri
         end
         files.setText(uri, script)
+        files.compileState(uri)
     end
 
     local _ <close> = function ()
         for _, info in ipairs(data) do
-            files.remove(furi.encode(info.path))
+            files.remove(furi.encode(TESTROOT .. info.path))
         end
     end
 
@@ -86,7 +88,9 @@ function TEST(data)
     assert(result ~= nil)
     result.complete = nil
     result.enableCommon = nil
-    removeMetas(result)
+    if NeedRemoveMeta then
+        removeMetas(result)
+    end
     for _, item in ipairs(result) do
         if item.id then
             local r = core.resolve(item.id)
@@ -104,6 +108,12 @@ function TEST(data)
                 : gsub('\r\n', '\n')
         end
     end
+    for _, eitem in ipairs(expect) do
+        if eitem['description'] then
+            eitem['description'] = eitem['description']
+                : gsub('%$(.-)%$', _G)
+        end
+    end
     assert(result)
     assert(eq(expect, result))
 end
@@ -119,6 +129,37 @@ local function WITH_CONFIG(cfg, f)
         config.set(nil, k, v)
     end
 end
+
+TEST {
+    {
+        path = 'abc.lua',
+        content = [[
+            ---@meta
+
+            ---@class A
+            ---@field f1 integer
+            ---@field f2 boolean
+            
+            ---@type A[]
+            X = {}
+]],
+    },
+    {
+        path = 'test.lua',
+        content = [[ X[1].<??>]],
+        main = true,
+    },
+    completion = {
+        {
+            label = 'f1',
+            kind = CompletionItemKind.Field,
+        },
+        {
+            label = 'f2',
+            kind = CompletionItemKind.Field,
+        },
+    }
+}
 
 TEST {
     {
@@ -440,6 +481,51 @@ config.set(nil, 'Lua.runtime.path', originRuntimePath)
 
 TEST {
     {
+        path = 'abc.lua',
+        content = '---@meta _',
+    },
+    {
+        path = 'test.lua',
+        content = 'require "a<??>"',
+        main = true,
+    },
+    completion = nil
+}
+
+TEST {
+    {
+        path = 'abc.lua',
+        content = '---@meta xxxxx',
+    },
+    {
+        path = 'test.lua',
+        content = 'require "a<??>"',
+        main = true,
+    },
+    completion = nil
+}
+
+TEST {
+    {
+        path = 'abc.lua',
+        content = '---@meta xxxxx',
+    },
+    {
+        path = 'test.lua',
+        content = 'require "xx<??>"',
+        main = true,
+    },
+    completion = {
+        {
+            label = 'xxxxx',
+            kind = CompletionItemKind.File,
+            textEdit = EXISTS,
+        }
+    }
+}
+
+TEST {
+    {
         path = 'a.lua',
         content = [[
             return {
@@ -559,6 +645,8 @@ TEST {
     },
     completion = nil,
 }
+
+NeedRemoveMeta = true
 
 TEST {
     { path = 'f/a.lua' },
@@ -854,7 +942,7 @@ TEST {
             kind  = CompletionItemKind.Variable,
             detail = 'function',
             description = [[
-从 [myfunc.lua](file:///myfunc.lua) 中导入
+从 [myfunc.lua]($TESTROOTURI$myfunc.lua) 中导入
 
 ```lua
 function (a: any, b: any)
@@ -885,7 +973,7 @@ TEST {
             kind  = CompletionItemKind.Variable,
             detail = 'function',
             description = [[
-从 [dir\myfunc.lua](file:///dir/myfunc.lua) 中导入
+从 [dir\myfunc.lua]($TESTROOTURI$dir/myfunc.lua) 中导入
 
 ```lua
 function (a: any, b: any)

@@ -1,3 +1,35 @@
+# addonManager.enable
+
+Whether the addon manager is enabled or not.
+
+## type
+
+```ts
+boolean
+```
+
+## default
+
+```jsonc
+true
+```
+
+# codeLens.enable
+
+启用代码度量。
+
+## type
+
+```ts
+boolean
+```
+
+## default
+
+```jsonc
+false
+```
+
 # completion.autoRequire
 
 输入内容看起来是个文件名时，自动 `require` 此文件。
@@ -222,7 +254,9 @@ Array<string>
 * ``"err-nonstandard-symbol"``
 * ``"err-then-as-do"``
 * ``"exp-in-action"``
+* ``"global-element"``
 * ``"global-in-nil-env"``
+* ``"incomplete-signature-doc"``
 * ``"index-in-func-name"``
 * ``"invisible"``
 * ``"jump-local-scope"``
@@ -267,11 +301,16 @@ Array<string>
 * ``"miss-sep-in-table"``
 * ``"miss-space-between"``
 * ``"miss-symbol"``
+* ``"missing-fields"``
+* ``"missing-global-doc"``
+* ``"missing-local-export-doc"``
 * ``"missing-parameter"``
 * ``"missing-return"``
 * ``"missing-return-value"``
+* ``"name-style-check"``
 * ``"need-check-nil"``
 * ``"need-paren"``
+* ``"nesting-long-mark"``
 * ``"newfield-call"``
 * ``"newline-call"``
 * ``"no-unknown"``
@@ -410,9 +449,14 @@ object<string, string>
     "await": "Fallback",
     /*
     * codestyle-check
+    * name-style-check
     * spell-check
     */
     "codestyle": "Fallback",
+    /*
+    * global-element
+    */
+    "conventions": "Fallback",
     /*
     * duplicate-index
     * duplicate-set-field
@@ -431,6 +475,9 @@ object<string, string>
     * duplicate-doc-alias
     * duplicate-doc-field
     * duplicate-doc-param
+    * incomplete-signature-doc
+    * missing-global-doc
+    * missing-local-export-doc
     * undefined-doc-class
     * undefined-doc-name
     * undefined-doc-param
@@ -465,6 +512,7 @@ object<string, string>
     */
     "type-check": "Fallback",
     /*
+    * missing-fields
     * missing-parameter
     * missing-return
     * missing-return-value
@@ -529,9 +577,14 @@ object<string, string>
     "await": "Fallback",
     /*
     * codestyle-check
+    * name-style-check
     * spell-check
     */
     "codestyle": "Fallback",
+    /*
+    * global-element
+    */
+    "conventions": "Fallback",
     /*
     * duplicate-index
     * duplicate-set-field
@@ -550,6 +603,9 @@ object<string, string>
     * duplicate-doc-alias
     * duplicate-doc-field
     * duplicate-doc-param
+    * incomplete-signature-doc
+    * missing-global-doc
+    * missing-local-export-doc
     * undefined-doc-class
     * undefined-doc-name
     * undefined-doc-param
@@ -584,6 +640,7 @@ object<string, string>
     */
     "type-check": "Fallback",
     /*
+    * missing-fields
     * missing-parameter
     * missing-return
     * missing-return-value
@@ -681,7 +738,7 @@ object<string, string>
 ```jsonc
 {
     /*
-    优先级歧义，如：`num or 0 + 1`，推测用户的实际期望为 `(num or 0) + 1` 
+    优先级歧义，如：`num or 0 + 1`，推测用户的实际期望为 `(num or 0) + 1`
     */
     "ambiguity-1": "Any",
     /*
@@ -758,9 +815,17 @@ object<string, string>
     */
     "empty-block": "Opened",
     /*
+    Enable diagnostics to warn about global elements.
+    */
+    "global-element": "None",
+    /*
     不能使用全局变量（ `_ENV` 被设置为了 `nil`）
     */
     "global-in-nil-env": "Any",
+    /*
+    Incomplete @param or @return annotations for functions.
+    */
+    "incomplete-signature-doc": "None",
     /*
     Enable diagnostics for accesses to fields which are invisible.
     */
@@ -769,6 +834,15 @@ object<string, string>
     首字母小写的全局变量定义
     */
     "lowercase-global": "Any",
+    "missing-fields": "Any",
+    /*
+    Missing annotations for globals! Global functions must have a comment and annotations for all parameters and return values.
+    */
+    "missing-global-doc": "None",
+    /*
+    Missing annotations for exported locals! Exported local functions must have a comment and annotations for all parameters and return values.
+    */
+    "missing-local-export-doc": "None",
     /*
     Enable diagnostics for function calls where the number of arguments is less than the number of annotated function parameters.
     */
@@ -781,6 +855,10 @@ object<string, string>
     Enable diagnostics for return statements without values although the containing function declares returns.
     */
     "missing-return-value": "Any",
+    /*
+    Enable diagnostics for name style.
+    */
+    "name-style-check": "None",
     /*
     Enable diagnostics for variable usages if `nil` or an optional (potentially `nil`) value was assigned to the variable before.
     */
@@ -928,7 +1006,7 @@ object<string, string>
 ```jsonc
 {
     /*
-    优先级歧义，如：`num or 0 + 1`，推测用户的实际期望为 `(num or 0) + 1` 
+    优先级歧义，如：`num or 0 + 1`，推测用户的实际期望为 `(num or 0) + 1`
     */
     "ambiguity-1": "Warning",
     /*
@@ -1005,9 +1083,17 @@ object<string, string>
     */
     "empty-block": "Hint",
     /*
+    Enable diagnostics to warn about global elements.
+    */
+    "global-element": "Warning",
+    /*
     不能使用全局变量（ `_ENV` 被设置为了 `nil`）
     */
     "global-in-nil-env": "Warning",
+    /*
+    Incomplete @param or @return annotations for functions.
+    */
+    "incomplete-signature-doc": "Warning",
     /*
     Enable diagnostics for accesses to fields which are invisible.
     */
@@ -1016,6 +1102,15 @@ object<string, string>
     首字母小写的全局变量定义
     */
     "lowercase-global": "Information",
+    "missing-fields": "Warning",
+    /*
+    Missing annotations for globals! Global functions must have a comment and annotations for all parameters and return values.
+    */
+    "missing-global-doc": "Warning",
+    /*
+    Missing annotations for exported locals! Exported local functions must have a comment and annotations for all parameters and return values.
+    */
+    "missing-local-export-doc": "Warning",
     /*
     Enable diagnostics for function calls where the number of arguments is less than the number of annotated function parameters.
     */
@@ -1028,6 +1123,10 @@ object<string, string>
     Enable diagnostics for return statements without values although the containing function declares returns.
     */
     "missing-return-value": "Warning",
+    /*
+    Enable diagnostics for name style.
+    */
+    "name-style-check": "Warning",
     /*
     Enable diagnostics for variable usages if `nil` or an optional (potentially `nil`) value was assigned to the variable before.
     */
@@ -1560,7 +1659,7 @@ string
 
 # misc.parameters
 
-VSCode中启动语言服务时的[命令行参数](https://github.com/sumneko/lua-language-server/wiki/Getting-Started#arguments)。
+VSCode中启动语言服务时的[命令行参数](https://luals.github.io/wiki/usage/#arguments)。
 
 ## type
 
@@ -1572,6 +1671,22 @@ Array<string>
 
 ```jsonc
 []
+```
+
+# nameStyle.config
+
+设定命名风格检查的配置
+
+## type
+
+```ts
+Object<string, string | array>
+```
+
+## default
+
+```jsonc
+{}
 ```
 
 # runtime.builtin
@@ -1608,6 +1723,8 @@ object<string, string>
     "ffi": "default",
     "io": "default",
     "jit": "default",
+    "jit.profile": "default",
+    "jit.util": "default",
     "math": "default",
     "os": "default",
     "package": "default",
@@ -1735,7 +1852,7 @@ false
 
 # runtime.plugin
 
-插件路径，请查阅[文档](https://github.com/sumneko/lua-language-server/wiki/Plugins)了解用法。
+插件路径，请查阅[文档](https://luals.github.io/wiki/plugins)了解用法。
 
 ## type
 
@@ -1922,23 +2039,6 @@ Array<string>
 
 ```jsonc
 []
-```
-
-# telemetry.enable
-
-启用遥测，通过网络发送你的编辑器信息与错误日志。在[此处](https://github.com/sumneko/lua-language-server/wiki/Home#privacy)阅读我们的隐私声明。
-
-
-## type
-
-```ts
-boolean | null
-```
-
-## default
-
-```jsonc
-null
 ```
 
 # type.castNumberToInteger
@@ -2160,22 +2260,6 @@ integer
 500
 ```
 
-# workspace.supportScheme
-
-为以下 scheme 的lua文件提供语言服务。
-
-## type
-
-```ts
-Array<string>
-```
-
-## default
-
-```jsonc
-["file","untitled","git"]
-```
-
 # workspace.useGitIgnore
 
 忽略 `.gitignore` 中列举的文件。
@@ -2194,7 +2278,7 @@ true
 
 # workspace.userThirdParty
 
-在这里添加私有的第三方库适配文件路径，请参考内置的[配置文件路径](https://github.com/sumneko/lua-language-server/tree/master/meta/3rd)
+在这里添加私有的第三方库适配文件路径，请参考内置的[配置文件路径](https://github.com/LuaLS/lua-language-server/tree/master/meta/3rd)
 
 ## type
 

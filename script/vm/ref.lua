@@ -29,7 +29,10 @@ simpleSwitch = util.switch()
 
 ---@async
 local function searchInAllFiles(suri, searcher, notify)
+    await.delay()
+
     searcher(suri)
+    await.delay()
 
     local uris = {}
     for uri in files.eachFile(suri) do
@@ -86,7 +89,7 @@ local function searchWord(source, pushResult, defMap, fileNotify)
         if not text then
             return
         end
-        if not text:match(key) then
+        if not text:find(key, 1, true) then
             return
         end
         local state = files.getState(uri)
@@ -104,29 +107,28 @@ local function searchWord(source, pushResult, defMap, fileNotify)
                     await.delay()
                 end
             end)
-        else
-            ---@async
-            guide.eachSourceTypes(state.ast, {'getfield', 'setfield'}, function (src)
-                if src.field and src.field[1] == key then
-                    checkDef(src)
-                    await.delay()
-                end
-            end)
-            ---@async
-            guide.eachSourceTypes(state.ast, {'getmethod', 'setmethod'}, function (src)
-                if src.method and src.method[1] == key then
-                    checkDef(src)
-                    await.delay()
-                end
-            end)
-            ---@async
-            guide.eachSourceTypes(state.ast, {'getindex', 'setindex'}, function (src)
-                if src.index and src.index.type == 'string' and src.index[1] == key then
-                    checkDef(src)
-                    await.delay()
-                end
-            end)
         end
+        ---@async
+        guide.eachSourceTypes(state.ast, {'getfield', 'setfield'}, function (src)
+            if src.field and src.field[1] == key then
+                checkDef(src)
+                await.delay()
+            end
+        end)
+        ---@async
+        guide.eachSourceTypes(state.ast, {'getmethod', 'setmethod'}, function (src)
+            if src.method and src.method[1] == key then
+                checkDef(src)
+                await.delay()
+            end
+        end)
+        ---@async
+        guide.eachSourceTypes(state.ast, {'getindex', 'setindex'}, function (src)
+            if src.index and src.index.type == 'string' and src.index[1] == key then
+                checkDef(src)
+                await.delay()
+            end
+        end)
     end
 
     searchInAllFiles(guide.getUri(source), findWord, fileNotify)
@@ -228,13 +230,13 @@ end
 ---@param source  parser.object
 ---@param pushResult fun(src: parser.object)
 local function searchByLocalID(source, pushResult)
-    local sourceSets = vm.getLocalSourcesSets(source)
+    local sourceSets = vm.getVariableSets(source)
     if sourceSets then
         for _, src in ipairs(sourceSets) do
             pushResult(src)
         end
     end
-    local sourceGets = vm.getLocalSourcesGets(source)
+    local sourceGets = vm.getVariableGets(source)
     if sourceGets then
         for _, src in ipairs(sourceGets) do
             pushResult(src)
@@ -285,7 +287,10 @@ local function searchByDef(source, pushResult)
     local defs = vm.getDefs(source)
     for _, def in ipairs(defs) do
         pushResult(def)
-        if not guide.isLiteral(def) then
+        if  not guide.isLiteral(def)
+        and def.type ~= 'doc.alias'
+        and def.type ~= 'doc.class'
+        and def.type ~= 'doc.enum' then
             defMap[def] = true
         end
     end

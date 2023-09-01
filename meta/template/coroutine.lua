@@ -1,4 +1,4 @@
----@meta
+---@meta coroutine
 
 ---#DES 'coroutine'
 ---@class coroutinelib
@@ -17,6 +17,7 @@ function coroutine.create(f) end
 ---@nodiscard
 function coroutine.isyieldable(co) end
 ---#else
+---@version >5.2
 ---#DES 'coroutine.isyieldable'
 ---@return boolean
 ---@nodiscard

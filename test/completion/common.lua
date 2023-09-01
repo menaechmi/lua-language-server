@@ -1006,12 +1006,12 @@ t.<??>
 ]]
 {
     {
-        label = 'a.b.c',
+        label = "'a.b.c'",
         kind = define.CompletionItemKind.Field,
         textEdit = {
             start = 40002,
             finish = 40002,
-            newText = '["a.b.c"]',
+            newText = "['a.b.c']",
         },
         additionalTextEdits = {
             {
@@ -1032,12 +1032,12 @@ t.   <??>
 ]]
 {
     {
-        label = 'a.b.c',
+        label = "'a.b.c'",
         kind = define.CompletionItemKind.Field,
         textEdit = {
             start = 40005,
             finish = 40005,
-            newText = '["a.b.c"]',
+            newText = "['a.b.c']",
         },
         additionalTextEdits = {
             {
@@ -1058,7 +1058,7 @@ t['<??>']
 ]]
 {
     {
-        label = 'a.b.c',
+        label = "'a.b.c'",
         kind = define.CompletionItemKind.Field,
         textEdit = {
             start = 40003,
@@ -1075,12 +1075,12 @@ z<??>
 ]]
 {
     {
-        label = 'z.b.c',
+        label = "'z.b.c'",
         kind = define.CompletionItemKind.Field,
         textEdit = {
             start = 20000,
             finish = 20001,
-            newText = '_ENV["z.b.c"]',
+            newText = "_ENV['z.b.c']",
         },
     },
 }
@@ -1094,12 +1094,12 @@ z<??>
 ]]
 {
     {
-        label = 'z.b.c',
+        label = "'z.b.c'",
         kind = define.CompletionItemKind.Field,
         textEdit = {
             start = 20000,
             finish = 20001,
-            newText = '_G["z.b.c"]',
+            newText = "_G['z.b.c']",
         },
     },
 }
@@ -3538,7 +3538,7 @@ TEST [[
 require '<??>'
 ]]
 (function (results)
-    assert(#results == 11, require 'utility'.dump(results))
+    assert(#results == 9, require 'utility'.dump(results))
 end)
 
 TEST [[
@@ -3816,6 +3816,32 @@ f(<??>)
 }
 
 TEST [[
+local x = 1
+local y = 2
+
+---@enum(key) Enum
+local t = {
+    x = x,
+    y = y,
+}
+
+---@param p Enum
+local function f(p) end
+
+f(<??>)
+]]
+{
+    {
+        label    = '"x"',
+        kind     = define.CompletionItemKind.EnumMember,
+    },
+    {
+        label    = '"y"',
+        kind     = define.CompletionItemKind.EnumMember,
+    },
+}
+
+TEST [[
 --
 <??>
 ]]
@@ -4084,3 +4110,280 @@ local foo
 foo = {"<??>"}
 ]]
 (EXISTS)
+
+TEST [[
+---@class c
+---@field abc fun()
+---@field abc2 fun()
+
+---@param p c
+local function f(p) end
+
+f({
+    abc = function(s)
+        local abc3
+        abc<??>
+    end,
+})
+]]
+{
+    {
+        label = 'abc3',
+        kind  = define.CompletionItemKind.Variable,
+    },
+    {
+        label = 'abc',
+        kind  = define.CompletionItemKind.Text,
+    },
+    {
+        label = 'abc2',
+        kind  = define.CompletionItemKind.Text,
+    },
+}
+
+TEST [[
+while true do
+    continue<??>
+end
+]]
+{
+    {
+        label      = 'continue',
+        kind       = define.CompletionItemKind.Keyword,
+    },
+    {
+        label      = 'goto continue ..',
+        kind       = define.CompletionItemKind.Snippet,
+        additionalTextEdits = {
+            {
+                start   = 10004,
+                finish  = 10004,
+                newText = 'goto ',
+            },
+            {
+                start   = 20000,
+                finish  = 20000,
+                newText = '    ::continue::\n',
+            },
+        }
+    },
+}
+
+TEST [[
+while true do
+    goto continue<??>
+end
+]]
+{
+    {
+        label      = 'continue',
+        kind       = define.CompletionItemKind.Keyword,
+    },
+    {
+        label      = 'goto continue ..',
+        kind       = define.CompletionItemKind.Snippet,
+        additionalTextEdits = {
+            {
+                start   = 20000,
+                finish  = 20000,
+                newText = '    ::continue::\n',
+            }
+        }
+    },
+}
+
+TEST [[
+while true do
+    goto continue<??>
+    ::continue::
+end
+]]
+{
+    {
+        label      = 'continue',
+        kind       = define.CompletionItemKind.Keyword,
+    },
+    {
+        label      = 'goto continue ..',
+        kind       = define.CompletionItemKind.Snippet,
+        additionalTextEdits = {
+        }
+    },
+}
+
+Cared['description'] = true
+TEST [[
+---@class Foo
+---@field ['with quotes'] integer
+---@field without_quotes integer
+
+---@type Foo
+local bar = {}
+
+bar.<??>
+]]
+{
+    {
+        label = "'with quotes'",
+        kind  = define.CompletionItemKind.Field,
+        textEdit = {
+            start   = 70004,
+            finish  = 70004,
+            newText = "['with quotes']"
+        },
+        additionalTextEdits = {
+            {
+                start   = 70003,
+                finish  = 70004,
+                newText = '',
+            }
+        },
+        description = [[
+```lua
+(field) Foo['with quotes']: integer
+```]]
+    },
+    {
+        label = 'without_quotes',
+        kind  = define.CompletionItemKind.Field,
+        description = [[
+```lua
+(field) Foo.without_quotes: integer
+```]]
+    },
+}
+Cared['description'] = false
+
+TEST [[
+---@class A
+local M = {}
+
+function M:method1()
+end
+
+function M.static1(tt)
+end
+
+function M:method2()
+end
+
+function M.static2(tt)
+end
+
+---@type A
+local a
+
+a.<??>
+]]
+{
+    {
+        label ='static1(tt)',
+        kind  = define.CompletionItemKind.Function,
+    },
+    {
+        label ='static2(tt)',
+        kind  = define.CompletionItemKind.Function,
+    },
+    {
+        label ='method1(self)',
+        kind  = define.CompletionItemKind.Method,
+    },
+    {
+        label ='method2(self)',
+        kind  = define.CompletionItemKind.Method,
+    },
+}
+
+TEST [[
+---@class A
+local M = {}
+
+function M:method1()
+end
+
+function M.static1(tt)
+end
+
+function M:method2()
+end
+
+function M.static2(tt)
+end
+
+---@type A
+local a
+
+a:<??>
+]]
+{
+    {
+        label ='method1()',
+        kind  = define.CompletionItemKind.Method,
+    },
+    {
+        label ='method2()',
+        kind  = define.CompletionItemKind.Method,
+    },
+    {
+        label ='static1()',
+        kind  = define.CompletionItemKind.Function,
+    },
+    {
+        label ='static2()',
+        kind  = define.CompletionItemKind.Function,
+    },
+}
+
+TEST [[
+---@class A
+---@field x number
+---@field y? number
+---@field z number
+
+---@type A
+local t = {
+    <??>
+}
+]]
+{
+    {
+        label = 'x',
+        kind  = define.CompletionItemKind.Property,
+    },
+    {
+        label = 'z',
+        kind  = define.CompletionItemKind.Property,
+    },
+    {
+        label = 'y?',
+        kind  = define.CompletionItemKind.Property,
+    },
+}
+
+TEST [[
+---@class A
+---@field x number
+---@field y? number
+---@field z number
+
+---@param t A
+local function f(t) end
+
+f {
+    <??>
+}
+]]
+{
+    {
+        label = 'x',
+        kind  = define.CompletionItemKind.Property,
+    },
+    {
+        label = 'z',
+        kind  = define.CompletionItemKind.Property,
+    },
+    {
+        label = 'y?',
+        kind  = define.CompletionItemKind.Property,
+    },
+}

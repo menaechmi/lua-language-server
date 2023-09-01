@@ -7,6 +7,7 @@ local guide          = require 'parser.guide'
 local converter      = require 'proto.converter'
 local config         = require 'config'
 local linkedTable    = require 'linked-table'
+local client         = require 'client'
 
 local Care = util.switch()
     : case 'getglobal'
@@ -65,18 +66,21 @@ local Care = util.switch()
         if not options.variable then
             return
         end
-        local modifiers = 0
-        if source.parent and source.parent.type == 'tablefield' then
-            modifiers = define.TokenModifiers.declaration
-        end
         if source.parent then
+            if source.parent.type == 'tablefield' then
+                results[#results+1] = {
+                    start      = source.start,
+                    finish     = source.finish,
+                    type       = define.TokenTypes.property,
+                }
+                return
+            end
             local value = source.parent.value
             if value and value.type == 'function' then
                 results[#results+1] = {
                     start      = source.start,
                     finish     = source.finish,
                     type       = define.TokenTypes.method,
-                    modifieres = modifiers,
                 }
                 return
             end
@@ -86,7 +90,6 @@ local Care = util.switch()
                 start      = source.start,
                 finish     = source.finish,
                 type       = define.TokenTypes.method,
-                modifieres = modifiers,
             }
             return
         end
@@ -95,7 +98,6 @@ local Care = util.switch()
                 start      = source.start,
                 finish     = source.finish,
                 type       = define.TokenTypes.method,
-                modifieres = modifiers,
             }
             return
         end
@@ -103,7 +105,6 @@ local Care = util.switch()
             start      = source.start,
             finish     = source.finish,
             type       = define.TokenTypes.property,
-            modifieres = modifiers,
         }
     end)
     : case 'local'
@@ -137,12 +138,20 @@ local Care = util.switch()
         local uri = guide.getUri(loc)
         -- 1. 值为函数的局部变量 | Local variable whose value is a function
         if vm.getInfer(source):hasFunction(uri) then
-            results[#results+1] = {
-                start      = source.start,
-                finish     = source.finish,
-                type       = define.TokenTypes['function'],
-                modifieres = define.TokenModifiers.declaration,
-            }
+            if source.type == 'local' then
+                results[#results+1] = {
+                    start      = source.start,
+                    finish     = source.finish,
+                    type       = define.TokenTypes['function'],
+                    modifieres = define.TokenModifiers.declaration,
+                }
+            else
+                results[#results+1] = {
+                    start      = source.start,
+                    finish     = source.finish,
+                    type       = define.TokenTypes['function'],
+                }
+            end
             return
         end
         -- 3. 特殊变量 | Special variableif source[1] == '_ENV' then
@@ -198,7 +207,7 @@ local Care = util.switch()
                 start      = source.start,
                 finish     = source.finish,
                 type       = define.TokenTypes['function'],
-                modifieres = guide.isSet(source) and define.TokenModifiers.declaration or nil,
+                modifieres = guide.isAssign(source) and define.TokenModifiers.declaration or nil,
             }
             return
         end
@@ -694,6 +703,22 @@ local Care = util.switch()
             type       = define.TokenTypes.operator,
         }
     end)
+    : case 'doc.meta.name'
+    : call(function (source, options, results)
+        results[#results+1] = {
+            start      = source.start,
+            finish     = source.finish,
+            type       = define.TokenTypes.namespace,
+        }
+    end)
+    : case 'doc.attr'
+    : call(function (source, options, results)
+        results[#results+1] = {
+            start      = source.start,
+            finish     = source.finish,
+            type       = define.TokenTypes.decorator,
+        }
+    end)
 
 ---@param state table
 ---@param results table
@@ -701,6 +726,7 @@ local function buildTokens(state, results)
     local tokens = {}
     local lastLine = 0
     local lastStartChar = 0
+    local index = 0
     for i, source in ipairs(results) do
         local startPos  = source.start
         local finishPos = source.finish
@@ -710,18 +736,23 @@ local function buildTokens(state, results)
         local deltaStartChar
         if deltaLine == 0 then
             deltaStartChar = startChar - lastStartChar
+            if deltaStartChar == 0 and i > 1 then
+                goto continue
+            end
         else
             deltaStartChar = startChar
         end
         lastLine = line
         lastStartChar = startChar
         -- see https://microsoft.github.io/language-server-protocol/specifications/specification-3-16/#textDocument_semanticTokens
-        local len = i * 5 - 5
+        index = index + 1
+        local len = index * 5 - 5
         tokens[len + 1] = deltaLine
         tokens[len + 2] = deltaStartChar
         tokens[len + 3] = finishPos.character - startPos.character -- length
         tokens[len + 4] = source.type
         tokens[len + 5] = source.modifieres or 0
+        ::continue::
     end
     return tokens
 end
@@ -786,7 +817,12 @@ local function solveMultilineAndOverlapping(state, results)
     for token in tokens:pairs() do
         local startPos = converter.packPosition(state, token.start)
         local endPos   = converter.packPosition(state, token.finish)
-        if endPos.line == startPos.line then
+        if  startPos.line == endPos.line
+        and startPos.character == endPos.character then
+            goto continue
+        end
+        if endPos.line == startPos.line
+        or client.getAbility 'textDocument.semanticTokens.multilineTokenSupport' then
             new[#new+1] = {
                 start      = startPos,
                 finish     = endPos,
@@ -817,6 +853,7 @@ local function solveMultilineAndOverlapping(state, results)
                 }
             end
         end
+        ::continue::
     end
 
     return new

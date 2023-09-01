@@ -210,6 +210,7 @@ local template = {
                                                     'assert',
                                                     'error',
                                                     'type',
+                                                    'os.exit',
                                                 }
                                             ),
     ['Lua.runtime.meta']                    = Type.String >> '${version} ${language} ${encoding}',
@@ -318,7 +319,6 @@ local template = {
     ['Lua.workspace.library']               = Type.Array(Type.String),
     ['Lua.workspace.checkThirdParty']       = Type.Boolean >> true,
     ['Lua.workspace.userThirdParty']        = Type.Array(Type.String),
-    ['Lua.workspace.supportScheme']         = Type.Array(Type.String) >> { 'file', 'untitled', 'git' },
     ['Lua.completion.enable']               = Type.Boolean >> true,
     ['Lua.completion.callSnippet']          = Type.String  >> 'Disable' << {
                                                 'Disable',
@@ -374,6 +374,7 @@ local template = {
                                             },
     ['Lua.window.statusBar']                = Type.Boolean >> true,
     ['Lua.window.progressBar']              = Type.Boolean >> true,
+    ['Lua.codeLens.enable']                 = Type.Boolean >> false,
     ['Lua.format.enable']                   = Type.Boolean >> true,
     ['Lua.format.defaultConfig']            = Type.Hash(Type.String, Type.String)
                                             >> {},
@@ -384,7 +385,8 @@ local template = {
                                                 auto_complete_table_sep = "true"
                                             },
     ['Lua.spell.dict']                      = Type.Array(Type.String),
-    ['Lua.telemetry.enable']                = Type.Or(Type.Boolean >> false, Type.Nil) >> nil,
+    ['Lua.nameStyle.config']                = Type.Hash(Type.String, Type.Or(Type.String, Type.Array(Type.Hash(Type.String, Type.String))))
+                                            >> {},
     ['Lua.misc.parameters']                 = Type.Array(Type.String),
     ['Lua.misc.executablePath']             = Type.String,
     ['Lua.type.castNumberToInteger']        = Type.Boolean >> true,
@@ -395,8 +397,17 @@ local template = {
     ['Lua.doc.packageName']                 = Type.Array(Type.String),
 
     -- VSCode
+    ["Lua.addonManager.enable"]             = Type.Boolean >> true,
     ['files.associations']                  = Type.Hash(Type.String, Type.String),
-    ['files.exclude']                       = Type.Hash(Type.String, Type.Boolean),
+                                            -- copy from VSCode default
+    ['files.exclude']                       = Type.Hash(Type.String, Type.Boolean) >> {
+                                                ["**/.DS_Store"] = true,
+                                                ["**/.git"]      = true,
+                                                ["**/.hg"]       = true,
+                                                ["**/.svn"]      = true,
+                                                ["**/CVS"]       = true,
+                                                ["**/Thumbs.db"] = true,
+                                            },
     ['editor.semanticHighlighting.enabled'] = Type.Or(Type.Boolean, Type.String),
     ['editor.acceptSuggestionOnEnter']      = Type.String  >> 'on',
 }

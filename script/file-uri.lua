@@ -49,7 +49,7 @@ function m.encode(path)
 
     --lower-case windows drive letters in /C:/fff or C:/fff
     local start, finish, drive = path:find '/(%u):'
-    if drive then
+    if drive and finish then
         path = path:sub(1, start) .. drive:lower() .. path:sub(finish, -1)
     end
 
@@ -102,11 +102,14 @@ function m.isValid(uri)
     if path == '' then
         return false
     end
+    if scheme ~= 'file' then
+        return false
+    end
     return true
 end
 
 function m.normalize(uri)
-    if uri == '' then
+    if not m.isValid(uri) then
         return uri
     end
     return m.encode(m.decode(uri))

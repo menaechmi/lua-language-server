@@ -410,11 +410,11 @@ function love.graphics.getMeshCullMode() end
 ---love.graphics.getDimensions gets the dimensions of the window in units scaled by the screen's DPI scale factor, rather than pixels. Use getDimensions for calculations related to drawing to the screen and using the graphics coordinate system (calculating the center of the screen, for example), and getPixelDimensions only when dealing specifically with underlying pixels (pixel-related calculations in a pixel Shader, for example).
 ---
 ---
----[Open in Browser](https://love2d.org/wiki/love.graphics.getPixelDimenions)
+---[Open in Browser](https://love2d.org/wiki/love.graphics.getPixelDimensions)
 ---
 ---@return number pixelwidth # The width of the window in pixels.
 ---@return number pixelheight # The height of the window in pixels.
-function love.graphics.getPixelDimenions() end
+function love.graphics.getPixelDimensions() end
 
 ---
 ---Gets the height in pixels of the window.
@@ -731,13 +731,13 @@ function love.graphics.newFont(filename) end
 ---
 ---[Open in Browser](https://love2d.org/wiki/love.graphics.newImage)
 ---
----@overload fun(fileData: love.FileData, flags?: table):love.Image
----@overload fun(imageData: love.ImageData, flags?: table):love.Image
----@overload fun(compressedImageData: love.CompressedImageData, flags?: table):love.Image
+---@overload fun(fileData: love.FileData, settings?: table):love.Image
+---@overload fun(imageData: love.ImageData, settings?: table):love.Image
+---@overload fun(compressedImageData: love.CompressedImageData, settings?: table):love.Image
 ---@param filename string # The filepath to the image file.
----@param flags? {dpiscale: number, linear: boolean, mipmaps: boolean} # A table containing the following fields:
+---@param settings? {dpiscale: number, linear: boolean, mipmaps: boolean} # A table containing the following fields:
 ---@return love.Image image # A new Image object which can be drawn on screen.
-function love.graphics.newImage(filename, flags) end
+function love.graphics.newImage(filename, settings) end
 
 ---
 ---Creates a new specifically formatted image.
@@ -794,6 +794,7 @@ function love.graphics.newParticleSystem(image, buffer) end
 ---
 ---[Open in Browser](https://love2d.org/wiki/love.graphics.newQuad)
 ---
+---@overload fun(x: number, y: number, width: number, height: number, texture: love.Texture):love.Quad
 ---@param x number # The top-left position in the Image along the x-axis.
 ---@param y number # The top-left position in the Image along the y-axis.
 ---@param width number # The width of the Quad in the Image. (Must be greater than 0.)
@@ -1074,8 +1075,7 @@ function love.graphics.scale(sx, sy) end
 ---
 ---[Open in Browser](https://love2d.org/wiki/love.graphics.setBackgroundColor)
 ---
----@overload fun()
----@overload fun()
+---@overload fun(rgba: table)
 ---@param red number # The red component (0-1).
 ---@param green number # The green component (0-1).
 ---@param blue number # The blue component (0-1).
@@ -2243,18 +2243,19 @@ function ParticleSystem:setBufferSize(size) end
 ---
 ---[Open in Browser](https://love2d.org/wiki/ParticleSystem:setColors)
 ---
+---@overload fun(self: love.ParticleSystem, rgba1: table, rgba2: table, rgba8: table)
 ---@param r1 number # First color, red component (0-1).
 ---@param g1 number # First color, green component (0-1).
 ---@param b1 number # First color, blue component (0-1).
----@param a1 number # First color, alpha component (0-1).
----@param r2 number # Second color, red component (0-1).
----@param g2 number # Second color, green component (0-1).
----@param b2 number # Second color, blue component (0-1).
----@param a2 number # Second color, alpha component (0-1).
----@param r8 number # Eighth color, red component (0-1).
----@param g8 number # Eighth color, green component (0-1).
----@param b8 number # Eighth color, blue component (0-1).
----@param a8 number # Eighth color, alpha component (0-1).
+---@param a1? number # First color, alpha component (0-1).
+---@param r2? number # Second color, red component (0-1).
+---@param g2? number # Second color, green component (0-1).
+---@param b2? number # Second color, blue component (0-1).
+---@param a2? number # Second color, alpha component (0-1).
+---@param r8? number # Eighth color, red component (0-1).
+---@param g8? number # Eighth color, green component (0-1).
+---@param b8? number # Eighth color, blue component (0-1).
+---@param a8? number # Eighth color, alpha component (0-1).
 function ParticleSystem:setColors(r1, g1, b1, a1, r2, g2, b2, a2, r8, g8, b8, a8) end
 
 ---
@@ -2420,8 +2421,8 @@ function ParticleSystem:setSizeVariation(variation) end
 ---[Open in Browser](https://love2d.org/wiki/ParticleSystem:setSizes)
 ---
 ---@param size1 number # The first size.
----@param size2 number # The second size.
----@param size8 number # The eighth size.
+---@param size2? number # The second size.
+---@param size8? number # The eighth size.
 function ParticleSystem:setSizes(size1, size2, size8) end
 
 ---

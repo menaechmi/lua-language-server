@@ -4,6 +4,7 @@ local encoder = require 'encoder'
 
 local offsetEncoding = 'utf16'
 
+---@class converter
 local m = {}
 
 ---@alias position {line: integer, character: integer}
@@ -204,6 +205,31 @@ end
 
 function m.setOffsetEncoding(encoding)
     offsetEncoding = encoding:lower():gsub('%-', '')
+end
+
+---@param s        string
+---@param i?       integer
+---@param j?       integer
+---@return integer
+function m.len(s, i, j)
+    return encoder.len(offsetEncoding, s, i, j)
+end
+
+---@class proto.command
+---@field title string
+---@field command string
+---@field arguments any[]
+
+---@param title string
+---@param command string
+---@param arguments any[]
+---@return proto.command
+function m.command(title, command, arguments)
+    return {
+        title     = title,
+        command   = command,
+        arguments = arguments,
+    }
 end
 
 return m

@@ -47,6 +47,7 @@ function TEST(datas)
         end
         data.content = newScript
         files.setText(uri, newScript)
+        files.compileState(uri)
     end
 
     local _ <close> = function ()
@@ -57,20 +58,26 @@ function TEST(datas)
 
 
     local results = {}
+    local origins = {}
     for _, data in ipairs(datas) do
         local uri = furi.encode(data.path)
         core(uri, false, function (result)
-            results[#results+1] = {
-                result.start,
-                result.finish,
-                uri,
-            }
+            if result.code == datas.code then
+                results[#results+1] = {
+                    result.start,
+                    result.finish,
+                    uri,
+                }
+            end
+            origins[#origins+1] = result
         end)
     end
+    assert(datas.code, 'Need code')
     assert(founded(targetList, results))
 end
 
 TEST {
+    code = 'different-requires',
     {
         path = 'f/a.lua',
         content = '',
@@ -86,6 +93,7 @@ TEST {
 }
 
 TEST {
+    code = 'different-requires',
     {
         path = 'f/a.lua',
         content = '',
@@ -105,6 +113,7 @@ TEST {
 }
 
 TEST {
+    code = 'different-requires',
     {
         path = 'a.lua',
         content = '',
@@ -124,6 +133,7 @@ TEST {
 }
 
 TEST {
+    code = 'different-requires',
     {
         path = 'a/init.lua',
         content = '',
@@ -143,6 +153,7 @@ TEST {
 }
 
 TEST {
+    code = 'invisible',
     { path = 'a.lua', content = [[
         ---@class A
         ---@field package x string
@@ -155,6 +166,7 @@ TEST {
 }
 
 TEST {
+    code = 'invisible',
     { path = 'a.lua', content = [[
         ---@class A
         ---@field package x string
@@ -168,6 +180,7 @@ TEST {
 }
 
 TEST {
+    code = 'duplicate-doc-field',
     { path = 'a.lua', content = [[
         ---@class A
         ---@field <!x!> number
@@ -179,6 +192,7 @@ TEST {
 }
 
 TEST {
+    code = 'duplicate-set-field',
     { path = 'a.lua', content = [[
         ---@class A
         local mt
@@ -196,6 +210,7 @@ TEST {
 }
 
 TEST {
+    code = 'duplicate-set-field',
     { path = 'a.lua', content = [[
         ---@class A
         local mt

@@ -238,14 +238,14 @@ TEST [[
 string.<?sub?>()
 ]]
 [[
-function string.sub(s: string, i: integer, j?: integer)
+function string.sub(s: string|number, i: integer, j?: integer)
   -> string
 ]]
 
 TEST[[
 ('xx'):<?sub?>()
 ]]
-[[function string.sub(s: string, i: integer, j?: integer)
+[[function string.sub(s: string|number, i: integer, j?: integer)
   -> string]]
 
 TEST [[
@@ -272,7 +272,7 @@ TEST [[
 string.<?lower?>()
 ]]
 [[
-function string.lower(s: string)
+function string.lower(s: string|number)
   -> string
 ]]
 
@@ -490,7 +490,7 @@ local self: {
     id: integer = 1,
     remove: function,
     __index: table,
-    __name: string = "obj",
+    __name: string = 'obj',
 }
 ]]
 
@@ -610,7 +610,7 @@ end
 local <?r?> = a(1)
 ]]
 [[
-local r: string = "a"
+local r: string = 'a'
 ]]
 
 TEST[[
@@ -620,7 +620,7 @@ end
 local _, <?r?> = pcall(a, 1)
 ]]
 [[
-local r: string = "a"
+local r: string = 'a'
 ]]
 
 TEST[[
@@ -633,7 +633,7 @@ local n: integer
 TEST[[
 local <?x?> = '\a'
 ]]
-[[local x: string = "\007"]]
+[[local x: string = '\007']]
 
 TEST [[
 local <?t?> = {
@@ -827,9 +827,9 @@ local <?t?> = {
 ]]
 [[
 local t: {
-    [1]: string = "aaa",
-    [2]: string = "bbb",
-    [3]: string = "ccc",
+    [1]: string = 'aaa',
+    [2]: string = 'bbb',
+    [3]: string = 'ccc',
 }
 ]]
 
@@ -1712,13 +1712,13 @@ local <?t?> = {
 ]]
 [[
 local t: {
-    x: string = "e",
-    y: string = "f",
-    ['z']: string = "g",
-    [10]: string = "d",
-    [1]: string = "a",
-    [2]: string = "b",
-    [3]: string = "c"|"h",
+    x: string = 'e',
+    y: string = 'f',
+    ['z']: string = 'g',
+    [10]: string = 'd',
+    [1]: string = 'a',
+    [2]: string = 'b',
+    [3]: string = 'c'|'h',
 }
 ]]
 
@@ -1830,7 +1830,7 @@ local t = {
 local <?x?> = t[#t]
 ]]
 [[
-local x: string = "x"
+local x: string = 'x'
 ]]
 
 TEST [[
@@ -1864,10 +1864,10 @@ local <?x?> = {
 ]]
 [[
 local x: {
-    x: string = "",
-    y: string = "",
-    _x: string = "",
-    _y: string = "",
+    x: string = '',
+    y: string = '',
+    _x: string = '',
+    _y: string = '',
 }
 ]]
 
@@ -2383,6 +2383,25 @@ local obj: B {
 
 TEST [[
 ---@class A
+local M = {}
+
+---@private
+M.x = 0
+
+---@private
+function M:init()
+    self.x = 1
+end
+
+---@type A
+local <?a?>
+]]
+[[
+local a: A
+]]
+
+TEST [[
+---@class A
 ---@field x fun(): string
 
 ---@type table<string, A>
@@ -2429,4 +2448,43 @@ local t: {
     ['x']: integer = 1,
     ['y']: integer = 2,
 }
+]]
+
+TEST [[
+local enum = { a = 1, b = 2 }
+
+local <?t?> = {
+    [enum.a] = true,
+    [enum.b] = 2,
+    [3] = {}
+}
+]]
+[[
+local t: {
+    [1]: boolean = true,
+    [2]: integer = 2,
+    [3]: table,
+}
+]]
+
+TEST [[
+---@class A
+---@overload fun(x: number): boolean
+local <?x?>
+]]
+[[
+local x: A
+]]
+
+TEST [[
+---@type A
+local <?f?>
+
+---@enum A
+local t = {
+    x = f,
+}
+]]
+[[
+local f: A
 ]]

@@ -58,7 +58,7 @@ function TEST(datas)
     local sourceList
     local sourceUri
     for i, data in ipairs(datas) do
-        local uri = furi.encode(data.path)
+        local uri = furi.encode(TESTROOT .. data.path)
         local newScript, catched = catch(data.content, '!?~')
         if catched['!'] or catched['~'] then
             for _, position in ipairs(catched['!'] + catched['~']) do
@@ -74,11 +74,12 @@ function TEST(datas)
             sourceUri = uri
         end
         files.setText(uri, newScript)
+        files.compileState(uri)
     end
 
     local _ <close> = function ()
         for _, info in ipairs(datas) do
-            files.remove(furi.encode(info.path))
+            files.remove(furi.encode(TESTROOT .. info.path))
         end
     end
 

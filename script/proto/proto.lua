@@ -1,4 +1,5 @@
 local subprocess = require 'bee.subprocess'
+local socket     = require 'bee.socket'
 local util       = require 'utility'
 local await      = require 'await'
 local pub        = require 'pub'
@@ -6,6 +7,7 @@ local jsonrpc    = require 'jsonrpc'
 local define     = require 'proto.define'
 local json       = require 'json'
 local inspect    = require 'inspect'
+local thread     = require 'bee.thread'
 
 local reqCounter = util.counter()
 
@@ -23,11 +25,15 @@ local function logRecieve(proto)
     log.info('rpc recieve:', json.encode(proto))
 end
 
+---@class proto
 local m = {}
 
 m.ability = {}
 m.waiting = {}
 m.holdon  = {}
+m.mode    = 'stdio'
+---@type bee.socket.fd
+m.fd      = nil
 
 function m.getMethodName(proto)
     if proto.method:sub(1, 2) == '$/' then
@@ -45,7 +51,11 @@ end
 function m.send(data)
     local buf = jsonrpc.encode(data)
     logSend(buf)
-    io.write(buf)
+    if m.mode == 'stdio' then
+        io.write(buf)
+    elseif m.mode == 'socket' then
+        m.fd:send(buf)
+    end
 end
 
 function m.response(id, res)
@@ -53,7 +63,10 @@ function m.response(id, res)
         log.error('Response id is nil!', inspect(res))
         return
     end
-    assert(m.holdon[id])
+    if not m.holdon[id] then
+        log.error('Unknown response id!', id)
+        return
+    end
     m.holdon[id] = nil
     local data  = {}
     data.id     = id
@@ -66,7 +79,10 @@ function m.responseErr(id, code, message)
         log.error('Response id is nil!', inspect(message))
         return
     end
-    assert(m.holdon[id])
+    if not m.holdon[id] then
+        log.error('Unknown response id!', id)
+        return
+    end
     m.holdon[id] = nil
     m.send {
         id    = id,
@@ -181,7 +197,7 @@ function m.doMethod(proto)
                 m.responseErr(proto.id, proto._closeReason or define.ErrorCodes.InternalError, proto._closeMessage or res)
             end
         end
-        ok, res = xpcall(abil, log.error, proto.params)
+        ok, res = xpcall(abil, log.error, proto.params, proto.id)
         await.delay()
     end)
 end
@@ -212,12 +228,24 @@ function m.doResponse(proto)
     waiting.resume(proto.result)
 end
 
-function m.listen()
-    subprocess.filemode(io.stdin,  'b')
-    subprocess.filemode(io.stdout, 'b')
-    io.stdin:setvbuf  'no'
-    io.stdout:setvbuf 'no'
-    pub.task('loadProto')
+function m.listen(mode, socketPort)
+    m.mode = mode
+    if mode == 'stdio' then
+        subprocess.filemode(io.stdin,  'b')
+        subprocess.filemode(io.stdout, 'b')
+        io.stdin:setvbuf  'no'
+        io.stdout:setvbuf 'no'
+        pub.task('loadProtoByStdio')
+    elseif mode == 'socket' then
+        local rfd = assert(socket('tcp'))
+        rfd:connect('127.0.0.1', socketPort)
+        local wfd1, wfd2 = socket.pair()
+        m.fd = wfd1
+        pub.task('loadProtoBySocket', {
+            wfd = wfd2:detach(),
+            rfd = rfd:detach(),
+        })
+    end
 end
 
 return m

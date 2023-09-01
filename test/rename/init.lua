@@ -212,3 +212,37 @@ function f(arg2)
     print(arg2)
 end
 ]]
+
+TEST ('field1', 'field2') [[
+---@class A
+---@field field1 number
+
+---@type A
+local t
+
+print(t.field1)
+]] [[
+---@class A
+---@field field2 number
+
+---@type A
+local t
+
+print(t.field2)
+]]
+
+TEST ('A', 'C') [[
+---@class A
+
+---@class B: A
+]] [[
+---@class C
+
+---@class B: C
+]]
+
+TEST ('A', 'C') [[
+---@class B: A
+]] [[
+---@class B: C
+]]

@@ -1,3 +1,35 @@
+# addonManager.enable
+
+Whether the addon manager is enabled or not.
+
+## type
+
+```ts
+boolean
+```
+
+## default
+
+```jsonc
+true
+```
+
+# codeLens.enable
+
+Enable code lens.
+
+## type
+
+```ts
+boolean
+```
+
+## default
+
+```jsonc
+false
+```
+
 # completion.autoRequire
 
 When the input looks like a file name, automatically `require` this file.
@@ -222,7 +254,9 @@ Array<string>
 * ``"err-nonstandard-symbol"``
 * ``"err-then-as-do"``
 * ``"exp-in-action"``
+* ``"global-element"``
 * ``"global-in-nil-env"``
+* ``"incomplete-signature-doc"``
 * ``"index-in-func-name"``
 * ``"invisible"``
 * ``"jump-local-scope"``
@@ -267,11 +301,16 @@ Array<string>
 * ``"miss-sep-in-table"``
 * ``"miss-space-between"``
 * ``"miss-symbol"``
+* ``"missing-fields"``
+* ``"missing-global-doc"``
+* ``"missing-local-export-doc"``
 * ``"missing-parameter"``
 * ``"missing-return"``
 * ``"missing-return-value"``
+* ``"name-style-check"``
 * ``"need-check-nil"``
 * ``"need-paren"``
+* ``"nesting-long-mark"``
 * ``"newfield-call"``
 * ``"newline-call"``
 * ``"no-unknown"``
@@ -410,9 +449,14 @@ object<string, string>
     "await": "Fallback",
     /*
     * codestyle-check
+    * name-style-check
     * spell-check
     */
     "codestyle": "Fallback",
+    /*
+    * global-element
+    */
+    "conventions": "Fallback",
     /*
     * duplicate-index
     * duplicate-set-field
@@ -431,6 +475,9 @@ object<string, string>
     * duplicate-doc-alias
     * duplicate-doc-field
     * duplicate-doc-param
+    * incomplete-signature-doc
+    * missing-global-doc
+    * missing-local-export-doc
     * undefined-doc-class
     * undefined-doc-name
     * undefined-doc-param
@@ -465,6 +512,7 @@ object<string, string>
     */
     "type-check": "Fallback",
     /*
+    * missing-fields
     * missing-parameter
     * missing-return
     * missing-return-value
@@ -529,9 +577,14 @@ object<string, string>
     "await": "Fallback",
     /*
     * codestyle-check
+    * name-style-check
     * spell-check
     */
     "codestyle": "Fallback",
+    /*
+    * global-element
+    */
+    "conventions": "Fallback",
     /*
     * duplicate-index
     * duplicate-set-field
@@ -550,6 +603,9 @@ object<string, string>
     * duplicate-doc-alias
     * duplicate-doc-field
     * duplicate-doc-param
+    * incomplete-signature-doc
+    * missing-global-doc
+    * missing-local-export-doc
     * undefined-doc-class
     * undefined-doc-name
     * undefined-doc-param
@@ -584,6 +640,7 @@ object<string, string>
     */
     "type-check": "Fallback",
     /*
+    * missing-fields
     * missing-parameter
     * missing-return
     * missing-return-value
@@ -681,7 +738,7 @@ object<string, string>
 ```jsonc
 {
     /*
-    优先级歧义，如：`num or 0 + 1`，推测用户的实际期望为 `(num or 0) + 1` 
+    优先级歧义，如：`num or 0 + 1`，推测用户的实际期望为 `(num or 0) + 1`
     */
     "ambiguity-1": "Any",
     /*
@@ -758,9 +815,17 @@ object<string, string>
     */
     "empty-block": "Opened",
     /*
+    Enable diagnostics to warn about global elements.
+    */
+    "global-element": "None",
+    /*
     不能使用全局变量（ `_ENV` 被设置为了 `nil`）
     */
     "global-in-nil-env": "Any",
+    /*
+    Incomplete @param or @return annotations for functions.
+    */
+    "incomplete-signature-doc": "None",
     /*
     Enable diagnostics for accesses to fields which are invisible.
     */
@@ -769,6 +834,15 @@ object<string, string>
     首字母小写的全局变量定义
     */
     "lowercase-global": "Any",
+    "missing-fields": "Any",
+    /*
+    Missing annotations for globals! Global functions must have a comment and annotations for all parameters and return values.
+    */
+    "missing-global-doc": "None",
+    /*
+    Missing annotations for exported locals! Exported local functions must have a comment and annotations for all parameters and return values.
+    */
+    "missing-local-export-doc": "None",
     /*
     Enable diagnostics for function calls where the number of arguments is less than the number of annotated function parameters.
     */
@@ -781,6 +855,10 @@ object<string, string>
     Enable diagnostics for return statements without values although the containing function declares returns.
     */
     "missing-return-value": "Any",
+    /*
+    Enable diagnostics for name style.
+    */
+    "name-style-check": "None",
     /*
     Enable diagnostics for variable usages if `nil` or an optional (potentially `nil`) value was assigned to the variable before.
     */
@@ -929,7 +1007,7 @@ object<string, string>
 ```jsonc
 {
     /*
-    优先级歧义，如：`num or 0 + 1`，推测用户的实际期望为 `(num or 0) + 1` 
+    优先级歧义，如：`num or 0 + 1`，推测用户的实际期望为 `(num or 0) + 1`
     */
     "ambiguity-1": "Warning",
     /*
@@ -1006,9 +1084,17 @@ object<string, string>
     */
     "empty-block": "Hint",
     /*
+    Enable diagnostics to warn about global elements.
+    */
+    "global-element": "Warning",
+    /*
     不能使用全局变量（ `_ENV` 被设置为了 `nil`）
     */
     "global-in-nil-env": "Warning",
+    /*
+    Incomplete @param or @return annotations for functions.
+    */
+    "incomplete-signature-doc": "Warning",
     /*
     Enable diagnostics for accesses to fields which are invisible.
     */
@@ -1017,6 +1103,15 @@ object<string, string>
     首字母小写的全局变量定义
     */
     "lowercase-global": "Information",
+    "missing-fields": "Warning",
+    /*
+    Missing annotations for globals! Global functions must have a comment and annotations for all parameters and return values.
+    */
+    "missing-global-doc": "Warning",
+    /*
+    Missing annotations for exported locals! Exported local functions must have a comment and annotations for all parameters and return values.
+    */
+    "missing-local-export-doc": "Warning",
     /*
     Enable diagnostics for function calls where the number of arguments is less than the number of annotated function parameters.
     */
@@ -1029,6 +1124,10 @@ object<string, string>
     Enable diagnostics for return statements without values although the containing function declares returns.
     */
     "missing-return-value": "Warning",
+    /*
+    Enable diagnostics for name style.
+    */
+    "name-style-check": "Warning",
     /*
     Enable diagnostics for variable usages if `nil` or an optional (potentially `nil`) value was assigned to the variable before.
     */
@@ -1561,7 +1660,7 @@ string
 
 # misc.parameters
 
-[Command line parameters](https://github.com/sumneko/lua-telemetry-server/tree/master/method) when starting the language service in VSCode.
+[Command line parameters](https://github.com/LuaLS/lua-telemetry-server/tree/master/method) when starting the language service in VSCode.
 
 ## type
 
@@ -1573,6 +1672,22 @@ Array<string>
 
 ```jsonc
 []
+```
+
+# nameStyle.config
+
+Set name style config
+
+## type
+
+```ts
+Object<string, string | array>
+```
+
+## default
+
+```jsonc
+{}
 ```
 
 # runtime.builtin
@@ -1609,6 +1724,8 @@ object<string, string>
     "ffi": "default",
     "io": "default",
     "jit": "default",
+    "jit.profile": "default",
+    "jit.util": "default",
     "math": "default",
     "os": "default",
     "package": "default",
@@ -1736,7 +1853,7 @@ false
 
 # runtime.plugin
 
-Plugin path. Please read [wiki](https://github.com/sumneko/lua-language-server/wiki/Plugins) to learn more.
+Plugin path. Please read the [wiki](https://luals.github.io/wiki/plugins) to learn more.
 
 ## type
 
@@ -1923,23 +2040,6 @@ Array<string>
 
 ```jsonc
 []
-```
-
-# telemetry.enable
-
-Enable telemetry to send your editor information and error logs over the network. Read our privacy policy [here](https://github.com/sumneko/lua-language-server/wiki/Home#privacy).
-
-
-## type
-
-```ts
-boolean | null
-```
-
-## default
-
-```jsonc
-null
 ```
 
 # type.castNumberToInteger
@@ -2161,22 +2261,6 @@ integer
 500
 ```
 
-# workspace.supportScheme
-
-Provide language server for the Lua files of the following scheme.
-
-## type
-
-```ts
-Array<string>
-```
-
-## default
-
-```jsonc
-["file","untitled","git"]
-```
-
 # workspace.useGitIgnore
 
 Ignore files list in `.gitignore` .
@@ -2195,7 +2279,7 @@ true
 
 # workspace.userThirdParty
 
-Add private third-party library configuration file paths here, please refer to the built-in [configuration file path](https://github.com/sumneko/lua-language-server/tree/master/meta/3rd)
+Add private third-party library configuration file paths here, please refer to the built-in [configuration file path](https://github.com/LuaLS/lua-language-server/tree/master/meta/3rd)
 
 ## type
 

@@ -36,7 +36,7 @@ function m.updateConfig(uri)
         log.info('Load config from specified', CONFIGPATH)
         log.info(inspect(specified))
         -- watch directory
-        filewatch.watch(workspace.getAbsolutePath(uri, CONFIGPATH):gsub('[^/\\]+$', ''))
+        filewatch.watch(workspace.getAbsolutePath(uri, CONFIGPATH):gsub('[^/\\]+$', ''), false)
         config.update(scope.override, specified)
     end
 
@@ -114,10 +114,10 @@ m.register 'initialize' {
 
         if params.workspaceFolders then
             for _, folder in ipairs(params.workspaceFolders) do
-                workspace.create(folder.uri)
+                workspace.create(files.getRealUri(folder.uri))
             end
         elseif params.rootUri then
-            workspace.create(params.rootUri)
+            workspace.create(files.getRealUri(params.rootUri))
         end
 
         local response = {
@@ -134,7 +134,6 @@ m.register 'initialize' {
 m.register 'initialized'{
     ---@async
     function (params)
-        files.init()
         local _ <close> = progress.create(workspace.getFirstScope().uri, lang.script.WINDOW_INITIALIZING, 0.5)
         m.updateConfig()
         local registrations = {}
@@ -250,31 +249,31 @@ m.register 'workspace/didChangeWorkspaceFolders' {
     function (params)
         log.debug('workspace/didChangeWorkspaceFolders', inspect(params))
         for _, folder in ipairs(params.event.added) do
-            workspace.create(folder.uri)
+            local uri = files.getRealUri(folder.uri)
+            workspace.create(uri)
             m.updateConfig()
-            workspace.reload(scope.getScope(folder.uri))
+            workspace.reload(scope.getScope(uri))
         end
         for _, folder in ipairs(params.event.removed) do
-            workspace.remove(folder.uri)
+            local uri = files.getRealUri(folder.uri)
+            workspace.remove(uri)
         end
     end
 }
 
 m.register 'textDocument/didOpen' {
+    ---@async
     function (params)
         local doc      = params.textDocument
-        local scheme   = furi.split(doc.uri)
-        local supports = config.get(doc.uri, 'Lua.workspace.supportScheme')
-        if not util.arrayHas(supports, scheme) then
-            return
-        end
-        local uri    = files.getRealUri(doc.uri)
+        local uri      = files.getRealUri(doc.uri)
         log.debug('didOpen', uri)
         local text  = doc.text
         files.setText(uri, text, true, function (file)
             file.version = doc.version
         end)
         files.open(uri)
+        workspace.awaitReady(uri)
+        files.compileState(uri)
     end
 }
 
@@ -293,17 +292,13 @@ m.register 'textDocument/didClose' {
 m.register 'textDocument/didChange' {
     ---@async
     function (params)
-        local doc      = params.textDocument
-        local scheme   = furi.split(doc.uri)
-        local supports = config.get(doc.uri, 'Lua.workspace.supportScheme')
-        if not util.arrayHas(supports, scheme) then
-            return
-        end
+        local doc     = params.textDocument
         local changes = params.contentChanges
         local uri     = files.getRealUri(doc.uri)
-        local text = files.getOriginText(uri)
+        local text    = files.getOriginText(uri)
         if not text then
-            files.setText(uri, pub.awaitTask('loadFile', furi.decode(uri)), false)
+            text = util.loadFile(furi.decode(uri))
+            files.setText(uri, text, false)
             return
         end
         local rows = files.getCachedRows(uri)
@@ -602,19 +597,7 @@ m.register 'textDocument/completion' {
     function (params)
         local uri  = files.getRealUri(params.textDocument.uri)
         if not workspace.isReady(uri) then
-            local count, max = workspace.getLoadingProcess(uri)
-            return {
-                {
-                    label = lang.script('HOVER_WS_LOADING', count, max),
-                    textEdit    = {
-                        range   = {
-                            start   = params.position,
-                            ['end'] = params.position,
-                        },
-                        newText = '',
-                    },
-                }
-            }
+            return nil
         end
         local _ <close> = progress.create(uri, lang.script.WINDOW_PROCESSING_COMPLETION, 0.5)
         --log.info(util.dump(params))
@@ -729,11 +712,11 @@ m.register 'completionItem/resolve' {
         --await.setPriority(1000)
         local state = files.getState(uri)
         if not state then
-            return nil
+            return item
         end
         local resolved = core.resolve(id)
         if not resolved then
-            return nil
+            return item
         end
         item.detail = resolved.detail or item.detail
         item.documentation = resolved.description and {
@@ -789,8 +772,8 @@ m.register 'textDocument/signatureHelp' {
             for j, param in ipairs(result.params) do
                 parameters[j] = {
                     label = {
-                        param.label[1],
-                        param.label[2],
+                        converter.len(result.label, 1, param.label[1]),
+                        converter.len(result.label, 1, param.label[2]),
                     }
                 }
             end
@@ -915,6 +898,53 @@ m.register 'textDocument/codeAction' {
     end
 }
 
+m.register 'textDocument/codeLens' {
+    capability = {
+        codeLensProvider = {
+            resolveProvider = true,
+        }
+    },
+    --abortByFileUpdate = true,
+    ---@async
+    function (params)
+        local uri = files.getRealUri(params.textDocument.uri)
+        if not config.get(uri, 'Lua.codeLens.enable') then
+            return
+        end
+        workspace.awaitReady(uri)
+        local state = files.getState(uri)
+        if not state then
+            return nil
+        end
+        local core = require 'core.code-lens'
+        local results = core.codeLens(uri)
+        if not results then
+            return nil
+        end
+        local codeLens = {}
+        for _, result in ipairs(results) do
+            codeLens[#codeLens+1] = {
+                range = converter.packRange(state, result.position, result.position),
+                data  = {
+                    uri = uri,
+                    id   = result.id,
+                },
+            }
+        end
+        return codeLens
+    end
+}
+
+m.register 'codeLens/resolve' {
+    ---@async
+    function (codeLen)
+        local core = require 'core.code-lens'
+        local command = core.resolve(codeLen.data.uri, codeLen.data.id)
+        codeLen.command = command or converter.command('...', '', {})
+        return codeLen
+    end
+}
+
 m.register 'workspace/executeCommand' {
     capability = {
         executeCommandProvider = {
@@ -923,6 +953,7 @@ m.register 'workspace/executeCommand' {
                 'lua.solve',
                 'lua.jsonToLua',
                 'lua.setConfig',
+                'lua.getConfig',
                 'lua.autoRequire',
             },
         },
@@ -941,10 +972,21 @@ m.register 'workspace/executeCommand' {
             return core(params.arguments[1])
         elseif command == 'lua.setConfig' then
             local core = require 'core.command.setConfig'
-            return core(params.arguments[1])
+            return core(params.arguments)
+        elseif command == 'lua.getConfig' then
+            local core = require 'core.command.getConfig'
+            return core(params.arguments)
         elseif command == 'lua.autoRequire' then
             local core = require 'core.command.autoRequire'
             return core(params.arguments[1])
+        elseif command == 'lua.exportDocument' then
+            local core = require 'core.command.exportDocument'
+            core(params.arguments)
+        elseif command == 'lua.reloadFFIMeta' then
+            local core = require 'core.command.reloadFFIMeta'
+            for _, scp in ipairs(workspace.folders) do
+                core(scp.uri)
+            end
         end
     end
 }
@@ -1374,8 +1416,8 @@ m.register 'textDocument/inlayHint' {
                 },
                 position     = converter.packPosition(state, res.offset),
                 kind         = res.kind,
-                paddingLeft  = true,
-                paddingRight = true,
+                paddingLeft  = res.kind == 1,
+                paddingRight = res.kind == 2,
             }
         end
         return hintResults

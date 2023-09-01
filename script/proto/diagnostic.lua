@@ -43,24 +43,8 @@ m.register {
 } {
     group    = 'luacheck',
     severity = 'Hint',
-    status   = 'Any',
+    status   = 'Opened',
 }
-
--- m.register {
---     'unused-local',
---     'unused-function',
---     'unused-label',
---     'unused-vararg',
---     'trailing-space',
---     'redundant-return',
---     'empty-block',
---     'code-after-break',
---     'unreachable-code',
--- } {
---     group    = 'unused',
---     severity = 'Hint',
---     status   = 'Opened',
--- }
 
 -- m.register {
 --     'redundant-value',
@@ -70,6 +54,7 @@ m.register {
 --     'missing-return-value',
 --     'redundant-return-value',
 --     'missing-return',
+--     'missing-fields',
 -- } {
 --     group    = 'unbalanced',
 --     severity = 'Warning',
@@ -84,6 +69,7 @@ m.register {
 --     'param-type-mismatch',
 --     'cast-type-mismatch',
 --     'return-type-mismatch',
+--     'inject-field',
 -- } {
 --     group    = 'type-check',
 --     severity = 'Warning',
@@ -109,6 +95,16 @@ m.register {
 -- }
 
 -- m.register {
+--     'incomplete-signature-doc',
+--     'missing-global-doc',
+--     'missing-local-export-doc',
+-- } {
+--     group    = 'luadoc',
+--     severity = 'Warning',
+--     status   = 'None',
+-- }
+
+-- m.register {
 --     'codestyle-check'
 -- } {
 --     group    = 'codestyle',
@@ -121,6 +117,14 @@ m.register {
 -- } {
 --     group    = 'codestyle',
 --     severity = 'Information',
+--     status   = 'None',
+-- }
+
+-- m.register {
+--     'name-style-check'
+-- } {
+--     group    = 'codestyle',
+--     severity = 'Warning',
 --     status   = 'None',
 -- }
 
@@ -177,6 +181,14 @@ m.register {
 --     group    = 'global',
 --     severity = 'Information',
 --     status   = 'Any',
+-- }
+
+-- m.register {
+--     'global-element',
+-- } {
+--     group   = 'conventions',
+--     severity = 'Warning',
+--     status = 'None'
 -- }
 
 -- m.register {

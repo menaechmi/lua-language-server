@@ -3,9 +3,7 @@
 ---
 ---The `lovr.filesystem` module provides access to the filesystem.
 ---
----
----### NOTE:
----LÖVR programs can only write to a single directory, called the save directory.
+---All files written will go in a special folder called the "save directory".
 ---
 ---The location of the save directory is platform-specific:
 ---
@@ -27,15 +25,25 @@
 ---    <td><code>/sdcard/Android/data/&lt;identity&gt;/files</code></td>
 ---  </tr> </table>
 ---
----`<identity>` should be a unique identifier for your app.
+---`<identity>` is a unique identifier for the project, and can be set in `lovr.conf`.
 ---
----It can be set either in `lovr.conf` or by using `lovr.filesystem.setIdentity`.
+---On Android, the identity can not be changed and will always be the package id (e.g. `org.lovr.app`).
 ---
----On Android, the identity can not be changed and will always be the package id, like `org.lovr.app`.
+---When files are read, they will be searched for in multiple places.
 ---
----All filenames are relative to either the save directory or the directory containing the project source.
+---By default, the save directory is checked first, then the project source (folder or zip).
 ---
----Files in the save directory take precedence over files in the project.
+---That way, when data is written to a file, any future reads will see the new data.
+---
+---The `t.saveprecedence` conf setting can be used to change this precedence.
+---
+---Conceptually, `lovr.filesystem` uses a "virtual filesystem", which is an ordered list of folders and zip files that are merged into a single filesystem hierarchy.
+---
+---Folders and archives in the list can be added and removed with `lovr.filesystem.mount` and `lovr.filesystem.unmount`.
+---
+---LÖVR extends Lua's `require` function to look for modules in the virtual filesystem.
+---
+---The search patterns can be changed with `lovr.filesystem.setRequirePath`, similar to `package.path`.
 ---
 ---@class lovr.filesystem
 lovr.filesystem = {}
@@ -269,7 +277,11 @@ function lovr.filesystem.remove(path) end
 ---
 ---Set the name of the save directory.
 ---
----@param identity string # The new name of the save directory.
+---This function can only be called once and is called automatically at startup, so this function normally isn't called manually.
+---
+---However, the identity can be changed by setting the `t.identity` option in `lovr.conf`.
+---
+---@param identity string # The name of the save directory.
 function lovr.filesystem.setIdentity(identity) end
 
 ---
@@ -279,7 +291,7 @@ function lovr.filesystem.setIdentity(identity) end
 ---
 ---Any question marks in the pattern will be replaced with the module that is being required.
 ---
----It is similar to Lua\'s `package.path` variable, but the main difference is that the patterns are relative to the save directory and the project directory.
+---It is similar to Lua\'s `package.path` variable, except the patterns will be checked using `lovr.filesystem` APIs. This allows `require` to work even when the project is packaged into a zip archive, or when the project is launched from a different directory.
 ---
 ---
 ---### NOTE:
@@ -302,7 +314,7 @@ function lovr.filesystem.setRequirePath(path) end
 function lovr.filesystem.unmount(path) end
 
 ---
----Write to a file.
+---Write to a file in the save directory.
 ---
 ---
 ---### NOTE:
@@ -310,8 +322,12 @@ function lovr.filesystem.unmount(path) end
 ---
 ---If the file already has data in it, it will be replaced with the new content.
 ---
----@overload fun(filename: string, blob: lovr.Blob):number
+---If the path contains subdirectories, all of the parent directories need to exist first or the write will fail.
+---
+---Use `lovr.filesystem.createDirectory` to make sure they're created first.
+---
+---@overload fun(filename: string, blob: lovr.Blob):boolean
 ---@param filename string # The file to write to.
 ---@param content string # A string to write to the file.
----@return number bytes # The number of bytes written.
+---@return boolean success # Whether the write was successful.
 function lovr.filesystem.write(filename, content) end

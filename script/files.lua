@@ -19,18 +19,20 @@ local sp       = require 'bee.subprocess'
 local pub      = require 'pub'
 
 ---@class file
----@field uri          uri
----@field content      string
----@field ref?         integer
----@field trusted?     boolean
----@field rows?        integer[]
----@field originText?  string
----@field text         string
----@field version?     integer
----@field originLines? integer[]
----@field diffInfo?    table[]
----@field cache        table
----@field id           integer
+---@field uri           uri
+---@field ref?          integer
+---@field trusted?      boolean
+---@field rows?         integer[]
+---@field originText?   string
+---@field text?         string
+---@field version?      integer
+---@field originLines?  integer[]
+---@field diffInfo?     table[]
+---@field cache?        table
+---@field id            integer
+---@field state?        parser.state
+---@field compileCount? integer
+---@field words?        table
 
 ---@class files
 ---@field lazyCache?   lazy-cacher
@@ -77,6 +79,9 @@ end
 ---@return uri
 function m.getRealUri(uri)
     if platform.OS ~= 'Windows' then
+        return furi.normalize(uri)
+    end
+    if not furi.isValid(uri) then
         return uri
     end
     local filename = furi.decode(uri)
@@ -212,6 +217,12 @@ local function pluginOnSetText(file, text)
     return text
 end
 
+---@param file file
+function m.removeState(file)
+    file.state = nil
+    m.stateMap[file.uri] = nil
+end
+
 --- 设置文件文本
 ---@param uri uri
 ---@param text? string
@@ -253,14 +264,14 @@ function m.setText(uri, text, isTrust, callback)
     end
     local clock = os.clock()
     local newText = pluginOnSetText(file, text)
-    m.stateMap[uri] = nil
-    file.text       = newText
-    file.trusted    = isTrust
-    file.originText = text
-    file.rows       = nil
-    file.words      = nil
-    file.cache = {}
-    file.cacheActiveTime = math.huge
+    m.removeState(file)
+    file.text            = newText
+    file.trusted         = isTrust
+    file.originText      = text
+    file.rows            = nil
+    file.words           = nil
+    file.compileCount    = 0
+    file.cache           = {}
     m.globalVersion = m.globalVersion + 1
     m.onWatch('version', uri)
     if create then
@@ -274,7 +285,6 @@ function m.setText(uri, text, isTrust, callback)
             util.saveFile(LOGPATH .. '/diffed.lua', newText)
         end
     end
-    m.getState(uri)
     log.trace('Set text:', uri, 'takes', os.clock() - clock, 'sec.')
 
     --if instance or TEST then
@@ -304,10 +314,10 @@ function m.setRawText(uri, text)
     if not text then
         return
     end
-    m.stateMap[uri] = nil
     local file = m.fileMap[uri]
     file.text             = text
     file.originText       = text
+    m.removeState(file)
 end
 
 function m.getCachedRows(uri)
@@ -460,8 +470,8 @@ function m.remove(uri)
     if not file then
         return
     end
+    m.removeState(file)
     m.fileMap[uri]        = nil
-    m.stateMap[uri]       = nil
     m._pairsCache         = nil
 
     m.fileCount     = m.fileCount - 1
@@ -557,6 +567,12 @@ function m.compileStateThen(state, file)
         if passed > 0.1 then
             log.warn(('Convert lazy-table for [%s] takes [%.3f] sec, size [%.3f] kb.'):format(file.uri, passed, #file.text / 1000))
         end
+    end
+
+    file.compileCount = file.compileCount + 1
+    if file.compileCount >= 3 then
+        file.state = state
+        log.debug('State persistence:', file.uri)
     end
 
     m.onWatch('compile', file.uri)
@@ -692,7 +708,8 @@ end
 ---@class parser.state
 ---@field diffInfo? table[]
 ---@field originLines? integer[]
----@field originText string
+---@field originText? string
+---@field lua? string
 
 --- 获取文件语法树
 ---@param uri uri
@@ -703,7 +720,6 @@ function m.getState(uri)
         return nil
     end
     local state = m.compileState(uri)
-    file.cacheActiveTime = timer.clock()
     return state
 end
 
@@ -764,7 +780,6 @@ function m.getCache(uri)
     if not file then
         return nil
     end
-    --file.cacheActiveTime = timer.clock()
     return file.cache
 end
 
@@ -876,6 +891,41 @@ function m.countStates()
     return n
 end
 
+---@param path string
+---@return string
+function m.normalize(path)
+    path = path:gsub('%$%{(.-)%}', function (key)
+        if key == '3rd' then
+            return (ROOT / 'meta' / '3rd'):string()
+        end
+        if key:sub(1, 4) == 'env:' then
+            local env = os.getenv(key:sub(5))
+            return env
+        end
+    end)
+    path = util.expandPath(path)
+    path = path:gsub('^%.[/\\]+', '')
+    for _ = 1, 1000 do
+        if path:sub(1, 2) == '..' then
+            break
+        end
+        local count
+        path, count = path:gsub('[^/\\]+[/\\]+%.%.[/\\]', '/', 1)
+        if count == 0 then
+            break
+        end
+    end
+    if platform.OS == 'Windows' then
+        path = path:gsub('[/\\]+', '\\')
+                   :gsub('[/\\]+$', '')
+                   :gsub('^(%a:)$', '%1\\')
+    else
+        path = path:gsub('[/\\]+', '/')
+                   :gsub('[/\\]+$', '')
+    end
+    return path
+end
+
 --- 注册事件
 ---@param callback async fun(ev: string, uri: uri)
 function m.watch(callback)
@@ -888,25 +938,6 @@ function m.onWatch(ev, uri)
             callback(ev, uri)
         end)
     end
-end
-
-function m.init()
-    --TODO 可以清空文件缓存，之后看要不要启用吧
-    --timer.loop(10, function ()
-    --    local list = {}
-    --    for _, file in pairs(m.fileMap) do
-    --        if timer.clock() - file.cacheActiveTime > 10.0 then
-    --            file.cacheActiveTime = math.huge
-    --            file.ast = nil
-    --            file.cache = {}
-    --            list[#list+1] = file.uri
-    --        end
-    --    end
-    --    if #list > 0 then
-    --        log.info('Flush file caches:', #list, '\n', table.concat(list, '\n'))
-    --        collectgarbage()
-    --    end
-    --end)
 end
 
 return m

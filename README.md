@@ -1,6 +1,6 @@
 # [Defold](https://defold.com/)'s fork of lua language server
 
-This language server works from the Defold editor and can be used to lint Defold projects.
+This language server works from the Defold editor and can be used to lint Defold projects. Learn more: https://forum.defold.com/t/linting-in-the-code-editor/72465
 
 ## Notable changes
 

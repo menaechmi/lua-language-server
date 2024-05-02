@@ -125,8 +125,6 @@ function mt:set(k, v)
     return v
 end
 
----@param k string
----@return any
 function mt:get(k)
     return self._data[k]
 end
@@ -237,11 +235,11 @@ function m.getLinkedScope(uri)
     return nil
 end
 
----@param uri uri
+---@param uri? uri
 ---@return scope
 function m.getScope(uri)
-    return m.getFolder(uri)
-        or m.getLinkedScope(uri)
+    return uri and (m.getFolder(uri)
+        or m.getLinkedScope(uri))
         or m.fallback
 end
 

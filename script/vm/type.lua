@@ -65,8 +65,14 @@ local function checkParentEnum(parentName, child, uri, mark, errs)
     local enums
     for _, set in ipairs(parentClass:getSets(uri)) do
         if set.type == 'doc.enum' then
-            enums = vm.getEnums(set)
-            break
+            local denums = vm.getEnums(set)
+            if denums then
+                if enums then
+                    enums = util.arrayMerge(enums, denums)
+                else
+                    enums = denums
+                end
+            end
         end
     end
     if not enums then
@@ -766,4 +772,26 @@ function vm.viewTypeErrorMessage(uri, errs)
     else
         return table.concat(lines, '\n')
     end
+end
+
+---@param name string
+---@param uri uri
+---@return parser.object[]?
+function vm.getOverloadsByTypeName(name, uri)
+    local global = vm.getGlobal('type', name)
+    if not global then
+        return nil
+    end
+    local results
+    for _, set in ipairs(global:getSets(uri)) do
+        for _, doc in ipairs(set.bindGroup) do
+            if doc.type == 'doc.overload' then
+                if not results then
+                    results = {}
+                end
+                results[#results+1] = doc.overload
+            end
+        end
+    end
+    return results
 end

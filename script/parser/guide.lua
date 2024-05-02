@@ -10,7 +10,7 @@ local type         = type
 ---@field type                  string
 ---@field special               string
 ---@field tag                   string
----@field args                  { [integer]: parser.object, start: integer, finish: integer }
+---@field args                  { [integer]: parser.object, start: integer, finish: integer, type: string }
 ---@field locals                parser.object[]
 ---@field returns?              parser.object[]
 ---@field breaks?               parser.object[]
@@ -74,9 +74,12 @@ local type         = type
 ---@field hasBreak?             true
 ---@field hasExit?              true
 ---@field [integer]             parser.object|any
+---@field dot                   { type: string, start: integer, finish: integer }
+---@field colon                 { type: string, start: integer, finish: integer }
 ---@field package _root         parser.object
 ---@field package _eachCache?   parser.object[]
 ---@field package _isGlobal?    boolean
+---@field package _typeCache?   parser.object[][]
 
 ---@class guide
 ---@field debugMode boolean
@@ -158,7 +161,7 @@ local childMap = {
     ['doc']                = {'#'},
     ['doc.class']          = {'class', '#extends', '#signs', 'docAttr', 'comment'},
     ['doc.type']           = {'#types', 'name', 'comment'},
-    ['doc.alias']          = {'alias', 'extends', 'comment'},
+    ['doc.alias']          = {'alias', 'docAttr', 'extends', 'comment'},
     ['doc.enum']           = {'enum', 'extends', 'comment', 'docAttr'},
     ['doc.param']          = {'param', 'extends', 'comment'},
     ['doc.return']         = {'#returns', 'comment'},
@@ -420,6 +423,22 @@ function m.getParentType(obj, want)
         end
     end
     error('guide.getParentType overstack')
+end
+
+--- 寻找所在父类型
+---@param obj parser.object
+---@return parser.object?
+function m.getParentTypes(obj, wants)
+    for _ = 1, 10000 do
+        obj = obj.parent
+        if not obj then
+            return nil
+        end
+        if wants[obj.type] then
+            return obj
+        end
+    end
+    error('guide.getParentTypes overstack')
 end
 
 --- 寻找根区块
@@ -1290,6 +1309,37 @@ function m.isParam(source)
         return false
     end
     return true
+end
+
+---@param source parser.object
+---@return parser.object[]?
+function m.getParams(source)
+    if source.type == 'call' then
+        local args = source.args
+        if not args then
+            return
+        end
+        assert(args.type == 'callargs', 'call.args type is\'t callargs')
+        return args
+    elseif source.type == 'callargs' then
+        return source
+    elseif source.type == 'function' then
+        local args = source.args
+        if not args then
+            return
+        end
+        assert(args.type == 'funcargs', 'function.args type is\'t callargs')
+        return args
+    end
+    return nil
+end
+
+---@param source parser.object
+---@param index integer
+---@return parser.object?
+function m.getParam(source, index)
+    local args = m.getParams(source)
+    return args and args[index] or nil
 end
 
 return m

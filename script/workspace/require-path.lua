@@ -5,6 +5,7 @@ local workspace = require "workspace"
 local config    = require 'config'
 local scope     = require 'workspace.scope'
 local util      = require 'utility'
+local plugin    = require 'plugin'
 
 ---@class require-path
 local m = {}
@@ -123,7 +124,7 @@ function mt:getRequireResultByPath(path)
             cutedPath = currentPath:sub(pos)
             head = currentPath:sub(1, pos - 1)
             pos = currentPath:match('[/\\]+()', pos)
-            if platform.OS == 'Windows' then
+            if platform.os == 'windows' then
                 searcher = searcher :gsub('[/\\]+', '\\')
             else
                 searcher = searcher :gsub('[/\\]+', '/')
@@ -180,6 +181,11 @@ function mt:searchUrisByRequireName(name)
     local results     = {}
     local searcherMap = {}
     local excludes    = {}
+
+    local pluginSuccess, pluginResults = plugin.dispatch('ResolveRequire', self.scp.uri, name)
+    if pluginSuccess and pluginResults ~= nil then
+        return pluginResults
+    end
 
     for uri in files.eachFile(self.scp.uri) do
         if vm.isMetaFileRequireable(uri) then

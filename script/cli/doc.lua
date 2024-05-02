@@ -65,6 +65,7 @@ local function packObject(source, mark)
         end
         if source.type == 'function.return' then
             new['desc'] = source.comment and getDesc(source.comment)
+            new['rawdesc'] = source.comment and getDesc(source.comment, true)
         end
         if source.type == 'doc.type.table' then
             new['fields'] = packObject(source.fields, mark)
@@ -82,6 +83,7 @@ local function packObject(source, mark)
         end
         if source.bindDocs then
             new['desc'] = getDesc(source)
+            new['rawdesc'] = getDesc(source, true)
         end
         new['view'] = new['view'] or vm.getInfer(source):view(ws.rootUri)
     end
@@ -115,6 +117,7 @@ local function collectTypes(global, results)
         name    = global.name,
         type    = 'type',
         desc    = nil,
+        rawdesc = nil,
         defines = {},
         fields  = {},
     }
@@ -131,6 +134,7 @@ local function collectTypes(global, results)
             extends = getExtends(set),
         }
         result.desc = result.desc or getDesc(set)
+        result.rawdesc = result.rawdesc or getDesc(set, true)
         ::CONTINUE::
     end
     if #result.defines == 0 then
@@ -163,7 +167,9 @@ local function collectTypes(global, results)
             field.start   = source.start
             field.finish  = source.finish
             field.desc    = getDesc(source)
+            field.rawdesc = getDesc(source, true)
             field.extends = packObject(source.extends)
+            field.visible = vm.getVisibleType(source)
             return
         end
         if source.type == 'setfield'
@@ -180,7 +186,16 @@ local function collectTypes(global, results)
             field.start   = source.start
             field.finish  = source.finish
             field.desc    = getDesc(source)
+            field.rawdesc = getDesc(source, true)
             field.extends = packObject(source.value)
+            field.visible = vm.getVisibleType(source)
+            if vm.isAsync(source, true) then
+                field.async = true
+            end
+            local depr = vm.getDeprecated(source)
+            if (depr and not depr.versions) then
+                field.deprecated = true
+            end
             return
         end
         if source.type == 'tableindex' then
@@ -199,7 +214,9 @@ local function collectTypes(global, results)
             field.start   = source.start
             field.finish  = source.finish
             field.desc    = getDesc(source)
+            field.rawdesc = getDesc(source, true)
             field.extends = packObject(source.value)
+            field.visible = vm.getVisibleType(source)
             return
         end
     end)
@@ -237,6 +254,16 @@ local function collectVars(global, results)
                 extends = packObject(set.value),
             }
             result.desc = result.desc or getDesc(set)
+            result.rawdesc = result.rawdesc or getDesc(set, true)
+            result.defines[#result.defines].extends['desc'] = getDesc(set)
+            result.defines[#result.defines].extends['rawdesc'] = getDesc(set, true)
+            if vm.isAsync(set, true) then
+                result.defines[#result.defines].extends['async'] = true
+            end
+            local depr = vm.getDeprecated(set)
+            if (depr and not depr.versions) then
+                result.defines[#result.defines].extends['deprecated'] = true
+            end
         end
     end
     if #result.defines == 0 then
@@ -251,12 +278,26 @@ local function collectVars(global, results)
     results[#results+1] = result
 end
 
+---Add config settings to JSON output.
+---@param results table
+local function collectConfig(results)
+    local result = {
+        name = 'LuaLS',
+        type = 'luals.config',
+        DOC = fs.absolute(fs.path(DOC)):string(),
+        defines = {},
+        fields = {}
+    }
+    results[#results+1] = result
+end
+
 ---@async
 ---@param callback fun(i, max)
 function export.export(outputPath, callback)
     local results = {}
     local globals = vm.getAllGlobals()
 
+    collectConfig(results)
     local max = 0
     for _ in pairs(globals) do
         max = max + 1
@@ -284,6 +325,18 @@ function export.export(outputPath, callback)
     return docPath, mdPath
 end
 
+function export.getDocOutputPath()
+    local doc_output_path = ''
+    if type(DOC_OUT_PATH) == 'string' then
+        doc_output_path = fs.absolute(fs.path(DOC_OUT_PATH)):string()
+    elseif DOC_OUT_PATH == true then
+        doc_output_path = fs.current_path():string()
+    else
+        doc_output_path = LOGPATH
+    end
+    return doc_output_path
+end
+
 ---@async
 ---@param outputPath string
 function export.makeDoc(outputPath)
@@ -306,8 +359,52 @@ function export.makeDoc(outputPath)
     return docPath, mdPath
 end
 
+
+---Find file 'doc.json'.
+---@return fs.path
+local function findDocJson()
+    local doc_json_path
+    if type(DOC_UPDATE) == 'string' then
+        doc_json_path = fs.absolute(fs.path(DOC_UPDATE)) .. '/doc.json'
+    else
+        doc_json_path = fs.current_path() .. '/doc.json'
+    end
+    if fs.exists(doc_json_path) then
+        return doc_json_path
+    else
+        error(string.format('Error: File "%s" not found.', doc_json_path))
+    end
+end
+
+---@return string # path of 'doc.json'
+---@return string # path to be documented
+local function getPathDocUpdate()
+    local doc_json_path = findDocJson()
+    local ok, doc_path = pcall(
+        function ()
+            local json = require('json')
+            local json_file = io.open(doc_json_path:string(), 'r'):read('*all')
+            local json_data = json.decode(json_file)
+            for _, section in ipairs(json_data) do
+                if section.type == 'luals.config' then
+                    return section.DOC
+                end
+            end
+    end)
+    if ok then
+        local doc_json_dir = doc_json_path:string():gsub('/doc.json', '')
+        return doc_json_dir, doc_path
+    else
+        error(string.format('Error: Cannot update "%s".', doc_json_path .. '/doc.json'))
+    end
+end
+
 function export.runCLI()
     lang(LOCALE)
+
+    if DOC_UPDATE then
+        DOC_OUT_PATH, DOC = getPathDocUpdate()
+    end
 
     if type(DOC) ~= 'string' then
         print(lang.script('CLI_CHECK_ERROR_TYPE', type(DOC)))
@@ -342,7 +439,7 @@ function export.runCLI()
         ws.awaitReady(rootUri)
         await.sleep(0.1)
 
-        local docPath, mdPath = export.export(LOGPATH, function (i, max)
+        local docPath, mdPath = export.export(export.getDocOutputPath(), function (i, max)
             if os.clock() - lastClock > 0.2 then
                 lastClock = os.clock()
                 local output = '\x0D'

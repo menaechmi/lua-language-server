@@ -9,7 +9,7 @@
 			"stopOnEntry": false,
 			"program": "${workspaceRoot}/test.lua",
 			"luaexe": "${workspaceFolder}/bin/lua-language-server",
-			"luaVersion": "5.4",
+			"luaVersion": "lua54",
 			"sourceCoding": "utf8",
 			"console": "integratedTerminal",
 			"internalConsoleOptions": "openOnSessionStart",
@@ -17,6 +17,9 @@
 				"print",
 				"stderr",
 			],
+			"windows": {
+				"luaexe": "${workspaceFolder}/bin/lua-language-server.exe"
+			}
 		},
 		{
 			"name": "🍄attach",
@@ -48,13 +51,16 @@
 			"request": "launch",
 			"stopOnEntry": false,
 			"luaexe": "${workspaceFolder}/bin/lua-language-server",
+			"windows": {
+				"luaexe": "${workspaceFolder}/bin/lua-language-server.exe"
+			},
 			"program": "${workspaceRoot}/tools/build-3rd-meta.lua",
 			"cpath": "${workspaceFolder}/bin/?.dll;${workspaceFolder}/bin/?.so",
 			"console": "integratedTerminal",
 			"internalConsoleOptions": "openOnSessionStart",
 			"arg": [
 			],
-			"luaVersion": "latest",
+			"luaVersion": "lua-latest",
 			"sourceCoding": "utf8",
 			"outputCapture": [
 				"print",
@@ -67,13 +73,16 @@
 			"request": "launch",
 			"stopOnEntry": false,
 			"luaexe": "${workspaceFolder}/bin/lua-language-server",
+			"windows": {
+				"luaexe": "${workspaceFolder}/bin/lua-language-server.exe"
+			},
 			"program": "${workspaceRoot}/tools/locale.lua",
 			"cpath": "${workspaceFolder}/bin/?.dll;${workspaceFolder}/bin/?.so",
 			"console": "integratedTerminal",
 			"internalConsoleOptions": "openOnSessionStart",
 			"arg": [
 			],
-			"luaVersion": "latest",
+			"luaVersion": "lua-latest",
 			"sourceCoding": "utf8",
 			"outputCapture": [
 				"print",
@@ -86,13 +95,16 @@
 			"request": "launch",
 			"stopOnEntry": false,
 			"luaexe": "${workspaceFolder}/bin/lua-language-server",
+			"windows": {
+				"luaexe": "${workspaceFolder}/bin/lua-language-server.exe"
+			},
 			"program": "${workspaceRoot}/tools/build-doc.lua",
 			"cpath": "${workspaceFolder}/bin/?.dll;${workspaceFolder}/bin/?.so",
 			"console": "integratedTerminal",
 			"internalConsoleOptions": "openOnSessionStart",
 			"arg": [
 			],
-			"luaVersion": "latest",
+			"luaVersion": "lua-latest",
 			"sourceCoding": "utf8",
 			"outputCapture": [
 				"print",
@@ -106,12 +118,15 @@
 			"stopOnEntry": false,
 			"program": "${workspaceRoot}/main.lua",
 			"luaexe": "${workspaceFolder}/bin/lua-language-server",
+			"windows": {
+				"luaexe": "${workspaceFolder}/bin/lua-language-server.exe"
+			},
 			"cpath": null,
 			"arg": [
 				"--check",
 				"${workspaceRoot}",
 			],
-			"luaVersion": "5.4",
+			"luaVersion": "lua-latest",
 			"sourceCoding": "utf8",
 			"outputCapture": [
 				"print",
@@ -125,12 +140,15 @@
 			"stopOnEntry": false,
 			"program": "${workspaceRoot}/main.lua",
 			"luaexe": "${workspaceFolder}/bin/lua-language-server",
+			"windows": {
+				"luaexe": "${workspaceFolder}/bin/lua-language-server.exe"
+			},
 			"cpath": null,
 			"arg": [
 				"--doc",
 				"${workspaceRoot}",
 			],
-			"luaVersion": "5.4",
+			"luaVersion": "lua-latest",
 			"sourceCoding": "utf8",
 			"outputCapture": [
 				"print",

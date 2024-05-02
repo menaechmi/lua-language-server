@@ -1,4 +1,4 @@
-local lclient  = require 'lclient'
+local lclient  = require 'lclient'()
 local furi     = require 'file-uri'
 local ws       = require 'workspace'
 local files    = require 'files'
@@ -11,6 +11,7 @@ local config   = require 'config.config'
 local fs       = require 'bee.filesystem'
 local provider = require 'provider'
 
+require 'plugin'
 require 'vm'
 
 lang(LOCALE)
@@ -26,6 +27,7 @@ if not rootUri then
     print(lang.script('CLI_CHECK_ERROR_URI', rootPath))
     return
 end
+rootUri = rootUri:gsub("/$", "")
 
 if CHECKLEVEL then
     if not define.DiagnosticSeverity[CHECKLEVEL] then
@@ -39,8 +41,14 @@ util.enableCloseFunction()
 
 local lastClock   = os.clock()
 local results = {}
+
+local function errorhandler(err)
+	print(err)
+	print(debug.traceback())
+end
+
 ---@async
-lclient():start(function (client)
+xpcall(lclient.start, errorhandler, lclient, function (client)
     client:registerFakers()
 
     client:initialize {
@@ -69,13 +77,15 @@ lclient():start(function (client)
     end
     config.set(rootUri, 'Lua.diagnostics.disable', util.getTableKeys(disables, true))
 
-    local uris = files.getAllUris(rootUri)
+    local uris = files.getChildFiles(rootUri)
     local max  = #uris
     for i, uri in ipairs(uris) do
         files.open(uri)
         diag.doDiagnostic(uri, true)
-        if os.clock() - lastClock > 0.2 then
+		-- Print regularly but always print the last entry to ensure that logs written to files don't look incomplete.
+        if os.clock() - lastClock > 0.2 or i == #uris then
             lastClock = os.clock()
+			client:update()
             local output = '\x0D'
                         .. ('>'):rep(math.ceil(i / max * 20))
                         .. ('='):rep(20 - math.ceil(i / max * 20))
@@ -83,6 +93,17 @@ lclient():start(function (client)
                         .. ('0'):rep(#tostring(max) - #tostring(i))
                         .. tostring(i) .. '/' .. tostring(max)
             io.write(output)
+			local filesWithErrors = 0
+			local errors = 0
+			for _, diags in pairs(results) do
+				filesWithErrors = filesWithErrors + 1
+				errors = errors + #diags
+			end
+			if errors > 0 then
+				local errorDetails = ' [' .. lang.script('CLI_CHECK_PROGRESS', errors, filesWithErrors) .. ']'
+				io.write(errorDetails)
+			end
+            io.flush()
         end
     end
     io.write('\x0D')
@@ -99,7 +120,10 @@ end
 if count == 0 then
     print(lang.script('CLI_CHECK_SUCCESS'))
 else
-    local outpath = LOGPATH .. '/check.json'
+    local outpath = CHECK_OUT_PATH
+    if outpath == nil then
+        outpath = LOGPATH .. '/check.json'
+    end
     util.saveFile(outpath, jsonb.beautify(results))
 
     print(lang.script('CLI_CHECK_RESULTS', count, outpath))

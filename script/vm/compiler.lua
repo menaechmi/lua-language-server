@@ -5,6 +5,7 @@ local rpath      = require 'workspace.require-path'
 local files      = require 'files'
 ---@class vm
 local vm         = require 'vm.vm'
+local plugin     = require 'plugin'
 
 ---@class parser.object
 ---@field _compiledNodes        boolean
@@ -882,52 +883,69 @@ local function compileCallArgNode(arg, call, callNode, fixIndex, myIndex)
         end
     end
 
-    for n in callNode:eachObject() do
-        if n.type == 'function' then
-            ---@cast n parser.object
-            local sign = vm.getSign(n)
+    ---@param n parser.object
+    local function dealDocFunc(n)
+        local myEvent
+        if n.args[eventIndex] then
+            local argNode = vm.compileNode(n.args[eventIndex])
+            myEvent = argNode:get(1)
+        end
+        if not myEvent
+        or not eventMap
+        or myIndex <= eventIndex
+        or myEvent.type ~= 'doc.type.string'
+        or eventMap[myEvent[1]] then
             local farg = getFuncArg(n, myIndex)
             if farg then
                 for fn in vm.compileNode(farg):eachObject() do
                     if isValidCallArgNode(arg, fn) then
-                        if fn.type == 'doc.type.function' then
-                            ---@cast fn parser.object
-                            if sign then
-                                local generic = vm.createGeneric(fn, sign)
-                                local args    = {}
-                                for i = fixIndex + 1, myIndex - 1 do
-                                    args[#args+1] = call.args[i]
-                                end
-                                local resolvedNode = generic:resolve(guide.getUri(call), args)
-                                vm.setNode(arg, resolvedNode)
-                                goto CONTINUE
-                            end
-                        end
                         vm.setNode(arg, fn)
-                        ::CONTINUE::
                     end
                 end
             end
         end
-        if n.type == 'doc.type.function' then
-            ---@cast n parser.object
-            local myEvent
-            if n.args[eventIndex] then
-                local argNode = vm.compileNode(n.args[eventIndex])
-                myEvent = argNode:get(1)
-            end
-            if not myEvent
-            or not eventMap
-            or myIndex <= eventIndex
-            or myEvent.type ~= 'doc.type.string'
-            or eventMap[myEvent[1]] then
-                local farg = getFuncArg(n, myIndex)
-                if farg then
-                    for fn in vm.compileNode(farg):eachObject() do
-                        if isValidCallArgNode(arg, fn) then
-                            vm.setNode(arg, fn)
+    end
+
+    ---@param n parser.object
+    local function dealFunction(n)
+        local sign = vm.getSign(n)
+        local farg = getFuncArg(n, myIndex)
+        if farg then
+            for fn in vm.compileNode(farg):eachObject() do
+                if isValidCallArgNode(arg, fn) then
+                    if fn.type == 'doc.type.function' then
+                        ---@cast fn parser.object
+                        if sign then
+                            local generic = vm.createGeneric(fn, sign)
+                            local args    = {}
+                            for i = fixIndex + 1, myIndex - 1 do
+                                args[#args+1] = call.args[i]
+                            end
+                            local resolvedNode = generic:resolve(guide.getUri(call), args)
+                            vm.setNode(arg, resolvedNode)
+                            goto CONTINUE
                         end
                     end
+                    vm.setNode(arg, fn)
+                    ::CONTINUE::
+                end
+            end
+        end
+    end
+
+    for n in callNode:eachObject() do
+        if n.type == 'function' then
+            ---@cast n parser.object
+            dealFunction(n)
+        elseif n.type == 'doc.type.function' then
+            ---@cast n parser.object
+            dealDocFunc(n)
+        elseif n.type == 'global' and n.cate == 'type' then
+            ---@cast n vm.global
+            local overloads = vm.getOverloadsByTypeName(n.name, guide.getUri(arg))
+            if overloads then
+                for _, func in ipairs(overloads) do
+                    dealDocFunc(func)
                 end
             end
         end
@@ -1013,6 +1031,54 @@ local function compileForVars(source, target)
     return false
 end
 
+---@param func parser.object
+---@param source parser.object
+local function compileFunctionParam(func, source)
+    -- local call ---@type fun(f: fun(x: number));call(function (x) end) --> x -> number
+    local funcNode = vm.compileNode(func)
+    for n in funcNode:eachObject() do
+        if n.type == 'doc.type.function' then
+            for index, arg in ipairs(n.args) do
+                if func.args[index] == source then
+                    local argNode = vm.compileNode(arg)
+                    for an in argNode:eachObject() do
+                        if an.type ~= 'doc.generic.name' then
+                            vm.setNode(source, an)
+                        end
+                    end
+                    return true
+                end
+            end
+        end
+    end
+    
+    local derviationParam = config.get(guide.getUri(func), 'Lua.type.inferParamType')
+    if derviationParam and func.parent.type == 'local' and func.parent.ref then
+        local refs = func.parent.ref
+        local found
+        for _, ref in ipairs(refs) do
+            if ref.parent.type ~= 'call' then
+                goto continue
+            end
+            local caller = ref.parent
+            if not caller.args then
+                goto continue
+            end
+            for index, arg in ipairs(source.parent) do
+                if arg == source then
+                    local callerArg = caller.args[index]
+                    if callerArg then
+                        vm.setNode(source, vm.compileNode(callerArg))
+                        found = true
+                    end
+                end
+            end
+            ::continue::
+        end
+        return found
+    end
+end
+
 ---@param source parser.object
 local function compileLocal(source)
     local myNode = vm.setNode(source, source)
@@ -1052,27 +1118,11 @@ local function compileLocal(source)
             vm.setNode(source, vm.compileNode(setfield.node))
         end
     end
-
     if source.parent.type == 'funcargs' and not hasMarkDoc and not hasMarkParam then
         local func = source.parent.parent
-        -- local call ---@type fun(f: fun(x: number));call(function (x) end) --> x -> number
-        local funcNode = vm.compileNode(func)
-        local hasDocArg
-        for n in funcNode:eachObject() do
-            if n.type == 'doc.type.function' then
-                for index, arg in ipairs(n.args) do
-                    if func.args[index] == source then
-                        local argNode = vm.compileNode(arg)
-                        for an in argNode:eachObject() do
-                            if an.type ~= 'doc.generic.name' then
-                                vm.setNode(source, an)
-                            end
-                        end
-                        hasDocArg = true
-                    end
-                end
-            end
-        end
+        local vmPlugin = plugin.getVmPlugin(guide.getUri(source))
+        local hasDocArg = vmPlugin and vmPlugin.OnCompileFunctionParam(compileFunctionParam, func, source)
+            or compileFunctionParam(func, source)
         if not hasDocArg then
             vm.setNode(source, vm.declareGlobal('type', 'any'))
         end

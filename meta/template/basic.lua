@@ -251,6 +251,9 @@ function setfenv(f, table) end
 ---#if VERSION == JIT or VERSION == 5.2 then
 ---@field __ipairs (fun(t):(fun(t,k,v):(integer|nil),any))|nil
 ---#end
+---#if VERSION >= 5.4 then
+---@field __close (fun(t,errobj):any)|nil
+---#end
 
 ---#DES 'setmetatable'
 ---@param table      table
@@ -336,3 +339,10 @@ function xpcall(f, msgh, arg1, ...) end
 ---@return T   ...
 ---@nodiscard
 function unpack(list, i, j) end
+
+---@version 5.1
+---@generic T1, T2, T3, T4, T5, T6, T7, T8, T9
+---@param list {[1]: T1, [2]: T2, [3]: T3, [4]: T4, [5]: T5, [6]: T6, [7]: T7, [8]: T8, [9]: T9 }
+---@return T1, T2, T3, T4, T5, T6, T7, T8, T9
+---@nodiscard
+function unpack(list) end

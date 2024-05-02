@@ -107,12 +107,13 @@ local function main()
 
     test 'tclient'
     test 'full'
-    test 'plugins.ffi.test'
+    test 'plugins.test'
+	test 'cli.test'
 end
 
 loadAllLibs()
 main()
 
 log.debug('test finish.')
-require 'bee.thread'.sleep(1)
+require 'bee.thread'.sleep(1000)
 os.exit()

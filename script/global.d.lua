@@ -52,8 +52,22 @@ CHECK = ''
 ---@type string
 DOC = ''
 
+--output directory path for documentation (doc.json, ...)
+---@type string
+DOC_OUT_PATH = ''
+
+---update an existing doc.json
+---@type string
+DOC_UPDATE = ''
+
 ---@type string | '"Error"' | '"Warning"' | '"Information"' | '"Hint"'
 CHECKLEVEL = 'Warning'
+
+--Where to write the check results (JSON).
+--
+--If nil, use `LOGPATH/check.json`.
+---@type string|nil
+CHECK_OUT_PATH = ''
 
 ---@type 'trace' | 'debug' | 'info' | 'warn' | 'error'
 LOGLEVEL = 'warn'
@@ -80,3 +94,7 @@ SOCKET = 0
 
 -- Allowing the use of the root directory or home directory as the workspace
 FORCE_ACCEPT_WORKSPACE = false
+
+-- Trust all plugins that are being loaded by workspace config files.
+-- This is potentially unsafe for normal use and meant for usage in CI environments only.
+TRUST_ALL_PLUGINS = false

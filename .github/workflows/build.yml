@@ -52,7 +52,7 @@ jobs:
           # Full name of the tarball asset
           PKG_NAME="${PKG_BASENAME}.zip"
 
-          7z -y a ${PKG_NAME} ${{ env.BIN_DIR }} main.lua debugger.lua LICENSE locale doc meta script
+          7z -y a ${PKG_NAME} ${{ env.BIN_DIR }} main.lua debugger.lua LICENSE script
 
           echo PKG_VERSION=${PKG_VERSION}             >> $GITHUB_OUTPUT
           echo PKG_BASENAME=${PKG_BASENAME}           >> $GITHUB_OUTPUT

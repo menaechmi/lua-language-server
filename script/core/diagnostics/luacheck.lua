@@ -10,6 +10,7 @@ local workspace = require "workspace"
 local util     = require 'utility'
 local fs       = require "luacheck.fs"
 local inspect    = require 'inspect'
+local platform = require 'bee.platform'
 
 
 local config_stack = nil
@@ -33,8 +34,12 @@ return function (uri, callback)
 
     if not config_stack then
         log.info("loading .luacheckrc")
-        local rootUri = (workspace.rootUri or ""):gsub("file://", "")
+        local rootUri = (workspace.rootUri or ""):gsub(platform.os == "windows" and "file:///" or "file://", "")
         local path = fs.join(rootUri, ".luacheckrc")
+        if platform.os == 'windows' then
+            path = path:gsub('/', "\\")
+        end
+
         local global_path = nil
         local config = lcconfig.load_config(path, global_path) or {options={stds={},files={},globals={}}}
 

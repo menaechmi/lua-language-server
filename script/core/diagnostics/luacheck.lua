@@ -43,24 +43,29 @@ return function (uri, callback)
         local global_path = nil
         local config = lcconfig.load_config(path, global_path) or {options={stds={},files={},globals={}}}
 
+        local editor_defaults = {
+            options = {
+                unused_args = false,
+                max_line_length = false,
+                ignore = {
+                    "611", -- line contains only whitespace
+                    "612", -- line contains trailing whitespace
+                    "614", -- trailing whitespace in a comment
+                },
+            }
+        }
+
         -- get editor provided globals
         local editor_config = {
             options = {
                 stds = {},
                 files = {},
-                ignore = {
-                    "212", -- unused args
-                    "611", -- line contains only whitespace
-                    "612", -- line contains trailing whitespace
-                    "614", -- trailing whitespace in a comment
-                    "631"  -- line is too long
-                },
                 globals = lspconfig.get(workspace.rootUri, 'Lua.diagnostics.globals') or {},
             }
         }
 
         -- create final config stack combining LuaCheck config, Defold globals and editor globals
-        config_stack = lcconfig.stack_configs({ config, editor_config })
+        config_stack = lcconfig.stack_configs({ editor_defaults, config, editor_config })
     end
 
     local text = files.getText(uri)

@@ -43,6 +43,13 @@ return function (uri, callback)
             options = {
                 stds = {},
                 files = {},
+                ignore = {
+                    "212", -- unused args
+                    "611", -- line contains only whitespace
+                    "612", -- line contains trailing whitespace
+                    "614", -- trailing whitespace in a comment
+                    "631"  -- line is too long
+                },
                 globals = lspconfig.get(workspace.rootUri, 'Lua.diagnostics.globals') or {},
             }
         }

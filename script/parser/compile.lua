@@ -1275,7 +1275,7 @@ local function parseNumber2(start)
             finish  = getPosition(offset - 1, 'right'),
             version = 'LuaJIT',
             info    = {
-                version = 'Lua 5.4',
+                version = State.version,
             }
         }
     end

@@ -52,20 +52,14 @@ return function (uri, callback)
                     "612", -- line contains trailing whitespace
                     "614", -- trailing whitespace in a comment
                 },
-            }
-        }
-
-        -- get editor provided globals
-        local editor_config = {
-            options = {
                 stds = {},
                 files = {},
-                globals = lspconfig.get(workspace.rootUri, 'Lua.diagnostics.globals') or {},
+                globals = lspconfig.get(workspace.rootUri, 'Lua.diagnostics.globals') or {} -- use editor-provided globals
             }
         }
 
         -- create final config stack combining LuaCheck config, Defold globals and editor globals
-        config_stack = lcconfig.stack_configs({ editor_defaults, config, editor_config })
+        config_stack = lcconfig.stack_configs({ editor_defaults, config })
     end
 
     local text = files.getText(uri)

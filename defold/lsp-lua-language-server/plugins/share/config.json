@@ -7,6 +7,12 @@
     "Lua": {
         "runtime": {
             "version": "Lua 5.1"
+        },
+        "workspace": {
+            "library": [
+                "${3rd}/Defold/library",
+                ".internal"
+            ]
         }
     },
     "window": {

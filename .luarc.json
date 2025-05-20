@@ -22,7 +22,7 @@
         "libraryFiles": "Opened"
     },
     "runtime": {
-        "version": "Lua 5.4",
+        "version": "Lua 5.1",
         "path": [
             "script/?.lua",
             "script/?/init.lua",
@@ -40,9 +40,27 @@
             "/libs/",
             "/3rd",
             "/.vscode",
-            "/meta"
+            "/meta",
+	    ".internal"
         ],
-        "checkThirdParty": false
+        "checkThirdParty": false,
+        "library": [
+            "${3rd}/Defold/library",
+	    ".internal"
+        ]
+    },
+    "diagnostics.globals": [
+	    "on_input",
+	    "on_message",
+	    "init",
+	    "update",
+	    "final"
+	],
+    "files.associations": {
+            "*.script"        : "lua",
+            "*.gui_script"    : "lua",
+            "*.render_script" : "lua",
+            "*.editor_script" : "lua"
     },
     "typeFormat": {
         "config": {
